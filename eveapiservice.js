@@ -42,7 +42,6 @@ EveApiService.prototype = {
 
 var components = [EveApiService];
 function NSGetModule(compMgr, fileSpec) {
-    dump('service getmodule\n');
     return XPCOMUtils.generateModule(components);
 }
 

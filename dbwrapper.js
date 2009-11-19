@@ -26,6 +26,9 @@ function dbwrapper() {
         dump(e.toString()+"\n");
         dump(this.conn.lastErrorString+"\n");
     }
+
+    dump("DB service initialized\n");
+    dump(this.connection+"\n");
 }
 
 dbwrapper.prototype = {
@@ -34,16 +37,19 @@ dbwrapper.prototype = {
     contractID:         "@aragaer/eve/db;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveDBService]),
     _xpcom_categories: [{
-        category: "profile-do-change",
+        category: "xpcom-startup",
         service: true
     }],
 
-    conn:   null,
-    get connection()    this.conn,
+    get connection()	this.conn,
 
     _initLocalDB:       function () {
         this.conn.executeSimpleSQL("PRAGMA synchronous = OFF");
         this.conn.executeSimpleSQL("PRAGMA temp_store = MEMORY");
+        if (!this.conn.tableExists('characters'))
+            this.conn.createTable('characters',
+                    'name char, id integer, account integer, ' +
+                    'corporation integer, primary key (id)');
     },
 
     _openStaticDB:      function () {
