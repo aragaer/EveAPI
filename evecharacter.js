@@ -6,12 +6,11 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 function CharacterCallbackLoader() {
     var ear = Cc["@aragaer/eve/api-requester;1"].
             getService(Ci.nsIEveApiRequester);
-    dump("woof!\n");
     ear.addDataObserver("characters", function (doc, aux) {
         var res, result;
         var db = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
-        dump(db+".conn = "+db.connection+"\n");
-        var replaceCharStm = db.connection.createStatement(
+        var conn = db.connection;
+        var replaceCharStm = conn.createStatement(
                 'replace into characters (name, id, account, corporation) ' +
                 'values (:name, :id, :acct_id, :corp_id);'
         );

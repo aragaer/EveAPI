@@ -28,7 +28,6 @@ function dbwrapper() {
     }
 
     dump("DB service initialized\n");
-    dump(this.connection+"\n");
 }
 
 dbwrapper.prototype = {
