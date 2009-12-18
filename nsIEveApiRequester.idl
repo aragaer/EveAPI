@@ -1,14 +1,7 @@
 #include "nsISupports.idl"
-#include "nsIDOMDocument.idl"
-
-[scriptable, function, uuid(1f955bf3-3d85-4ab4-85fb-3136495b5e65)]
-interface EveApiDataObserver : nsISupports {
-    void onData(in nsIDOMDocument data, in nsISupports aux);
-};
 
 [scriptable, uuid(07504627-1766-49a0-b2c8-fbf0e9a406b7)]
 interface nsIEveApiRequester : nsISupports {
     void refreshData(in string type, in nsISupports data);
-    void addDataObserver(in string type, in EveApiDataObserver cb);
 };
 

@@ -12,12 +12,16 @@ const EVEURLS = {
     charassets:     { url: "/char/AssetList.xml.aspx",      cb: [] },
 };
 
+var gOS;
+
 function eveRequester() {
     this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
             getService(Ci.nsICacheService).createSession("EVE API",
                     Ci.nsICache.STORE_OFFLINE, true);
 
-    this._fromCache = this._fromCache_null;
+    this._fromCache = this._fromCache_real;
+
+    gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
 }
 
 eveRequester.prototype = {
@@ -27,7 +31,7 @@ eveRequester.prototype = {
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveApiRequester]),
 
     _xpcom_categories: [{
-        category: "xpcom-startup",
+        category: "app-startup",
         service: true
     }],
 
@@ -41,13 +45,9 @@ eveRequester.prototype = {
                 : '');
         if (!res)
             return;
-        for each (cb in EVEURLS[type].cb)
-            cb(res, data);
-        dump("callbacks done, exiting\n");
-    },
 
-    addDataObserver:    function (type, cb) {
-        EVEURLS[type].cb.push(cb.onData);
+        gOS.notifyObservers({wrappedJSObject: {doc: res, aux: data}}, 'eve-data', type);
+        dump("sent eve-data notification to all listeners\n");
     },
 
     _makeHash:          function (str) {
@@ -107,10 +107,11 @@ eveRequester.prototype = {
         }
  
         result = req.responseXML;
+        dump(req.responseText+"\n");
  
         var error = evaluateXPath(result, "/eveapi/error/text()")[0];
         if (error) {
-            dump(error.wholeText+"\n");
+            dump("REQUESTER ERROR:"+error.wholeText+"\n");
             return cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE
                 ? this._fromCache(cd)
                 : null;
@@ -135,7 +136,6 @@ eveRequester.prototype = {
 
 var components = [eveRequester];
 function NSGetModule(compMgr, fileSpec) {
-    dump('requester getmodule\n');
     return XPCOMUtils.generateModule(components);
 }
 
