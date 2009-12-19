@@ -43,11 +43,10 @@ eveRequester.prototype = {
         var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, data
                 ? [i+'='+escape(dwjso[i]) for (i in dwjso)].join('&')
                 : '');
-        if (!res)
-            return;
-
-        gOS.notifyObservers({wrappedJSObject: {doc: res, aux: data}}, 'eve-data', type);
-        dump("sent eve-data notification to all listeners\n");
+        if (res)
+            gOS.notifyObservers({
+                wrappedJSObject: {doc: res, aux: data}
+            }, 'eve-data', type);
     },
 
     _makeHash:          function (str) {
@@ -68,12 +67,17 @@ eveRequester.prototype = {
 
     _fromCache_null:    function (cd) { cd.close(); return null; },
     _fromCache_real:    function (cd) {
-        var stream = cd.openInputStream(0);
-        var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
-                createInstance(Ci.nsIDOMParser);
-        var result = parser.parseFromStream(stream, "UTF-8",
-                stream.available(), "text/xml");
-        stream.close();
+        var result = null;
+        if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE) {
+            var stream = cd.openInputStream(0);
+            var parser = Cc["@mozilla.org/xmlextras/domparser;1"].
+                    createInstance(Ci.nsIDOMParser);
+            result = parser.parseFromStream(stream, "UTF-8",
+                    stream.available(), "text/xml");
+            stream.close();
+        } else {
+            cd.doom();
+        }
         cd.close();
         return result;
      },
@@ -95,15 +99,18 @@ eveRequester.prototype = {
         req.open('POST', url, false);
         req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         try {
+            var t = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+            t.initWithCallback(req.abort, 5000, t.TYPE_ONE_SHOT);
             req.send(data);
+            t.cancel();
         } catch (e) {
+            dump(e.toString()+"\n");
             req = {status: 0};
         }
         if (req.status != 200) {
             dump('Failed to connect to server!\n');
-            return cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE
-                ? this._fromCache(cd)
-                : null;
+            gOS.notifyObservers(null, 'eve-data-error', 'Failed to connect to server '+req.status);
+            return this._fromCache(cd);
         }
  
         result = req.responseXML;
@@ -112,10 +119,11 @@ eveRequester.prototype = {
         var error = evaluateXPath(result, "/eveapi/error/text()")[0];
         if (error) {
             dump("REQUESTER ERROR:"+error.wholeText+"\n");
-            return cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE
-                ? this._fromCache(cd)
-                : null;
+            gOS.notifyObservers(null, 'eve-data-error', error.wholeText);
+            return this._fromCache(cd);
         }
+
+        gOS.notifyObservers(null, 'eve-data-error', '');
  
         var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
             createInstance(Ci.nsIDOMSerializer);
