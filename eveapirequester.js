@@ -10,6 +10,7 @@ const EVEURLS = {
     characters:     { url: "/account/Characters.xml.aspx",  cb: [] },
     charsheet:      { url: "/char/CharacterSheet.xml.aspx", cb: [] },
     charassets:     { url: "/char/AssetList.xml.aspx",      cb: [] },
+    corpassets:     { url: "/corp/AssetList.xml.aspx",      cb: [] },
 };
 
 var gOS;
@@ -114,7 +115,7 @@ eveRequester.prototype = {
         }
  
         result = req.responseXML;
-        dump(req.responseText+"\n");
+//        dump(req.responseText+"\n");
  
         var error = evaluateXPath(result, "/eveapi/error/text()")[0];
         if (error) {

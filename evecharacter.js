@@ -27,14 +27,11 @@ CharacterCallback.prototype = {
             gOS.addObserver(this, 'eve-db-init', false);
             break;
         case 'eve-data':
-            dump("The data is ["+aData+"] the subject is "+aSubject+"\n");
             switch (aData) {
                 case 'characters':
-                    dump('characters!\n');
                     this._process(aSubject);
                     return;
                 default:
-                    dump('wha?\n');
                     break;
             }
             break;
@@ -62,7 +59,6 @@ CharacterCallback.prototype = {
         } catch (e) {
             dump("error in CharacterCallback\n");
         }
-        try {
         while (res = result.iterateNext()) {
             dump("result:\n");
             var my_data = {};
@@ -81,9 +77,7 @@ CharacterCallback.prototype = {
             replaceCorpStm.params.corp_id   = my_data.corporationID;
             replaceCorpStm.execute();
         }
-        } catch (e) {
-            dump(e.toString()+"\n");
-        }
+        gOS.notifyObservers(null, 'eve-characters-refresh', null);
     }
 }
 

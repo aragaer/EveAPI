@@ -34,9 +34,16 @@ EveApiService.prototype = {
     getCharacterAssets: function (id, key, charID, count) {
         this.requester.refreshData('charassets',
                 {userID: id, apiKey: key, characterID: charID});
-        var result = [];
         count.value = result.length;
         return result;
+    },
+
+    updateCorporationAssets:    function (id, key, charID, corpID) {
+        dump("Corp assets update requested\n");
+        this.requester.refreshData('corpassets',
+                { wrappedJSObject:
+                    {userID: id, apiKey: key, characterID: charID, owner: corpID}
+                });
     },
 };
 
