@@ -4,6 +4,8 @@ const Ci = Components.interfaces;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 var gOS;
 
+const fieldList = ['itemID','locationID','typeID','quantity','flag','singleton'];
+
 function InventoryCallback() {
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     this._conn = null;
@@ -64,10 +66,8 @@ InventoryCallback.prototype = {
         } catch (e) {
             dump("error in AssetsCallback:"+e.toString()+"\n");
         }
-        while (rowset = rowsets.iterateNext()) {
-            dump("Processing rowset="+rowset+"!\n");
+        while (rowset = rowsets.iterateNext())
             this._processAssetList(aux.wrappedJSObject.owner, rowset, replaceItemStm, doc);
-        }
     },
 
     _processAssetList:  function (owner, node, stm, doc) {
@@ -78,23 +78,28 @@ InventoryCallback.prototype = {
             dump("error in AssetsCallback:"+e.toString()+"\n");
             return;
         }
+        var IS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
         container = node.parentNode.getAttribute('itemID');
         while (row = rows.iterateNext()) {
             var my_data = {};
-            ['itemID', 'locationID', 'typeID', 'quantity', 'flag', 'singleton'].
-                forEach(function (field) {
-                    my_data[field] = row.getAttribute(field);
-                });
+            [my_data[f] = row.getAttribute(f) for each (f in fieldList)];
+
             stm.params.id       = my_data.itemID;
             stm.params.type_id  = my_data.typeID;
             stm.params.owner    = owner;
             container
                 ? stm.params.container = container
                 : stm.params.location  = my_data.locationID;
-            stm.params.count    = my_data.quantity;
+            stm.params.count    = my_data.quantity || 1;
             stm.params.flag     = my_data.flag || 0;
             stm.params.singleton= my_data.singleton || 0;
             stm.executeAsync();
+            try {
+            var type = IS.getItemType(my_data.typeID);
+            dump(type.name +(my_data.quantity == 1 ? "" : " x"+my_data.quantity)+ "\n");
+            } catch (e) {
+                dump("Assets:"+e.toString()+"\n");
+            }
             var childs = doc.evaluate('child::rowset', row, null, 0, null).iterateNext();
             if (childs)
                 this._processAssetList(owner, childs, stm, doc);
@@ -106,3 +111,4 @@ var components = [InventoryCallback];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
+
