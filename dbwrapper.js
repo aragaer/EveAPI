@@ -19,14 +19,8 @@ dbwrapper.prototype = {
         service:        true,
     }],
 
-    getConnection:      function () {
-        dump("Returning "+this._conn+"\n");
-        return this._conn;
-    },
-
-    createStatement:    function (statement) {
-        return this.conn.createStatement(statement);
-    },
+    getConnection:      function () this._conn,
+    createStatement:    function (q) this._conn.createStatement(q),
 
     observe:            function (aSubject, aTopic, aData) {
         dump('Got '+aTopic+' event in dbwrapper\n');

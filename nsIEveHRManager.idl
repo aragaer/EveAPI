@@ -1,0 +1,25 @@
+#include "nsISupports.idl"
+
+interface nsIEveCorporation;
+[scriptable, uuid(b8922ed5-966c-4a92-b0d7-e89391b56cf3)]
+interface nsIEveCharacter : nsISupports {
+    readonly attribute long id;
+    readonly attribute long account;
+    readonly attribute nsIEveCorporation corporation;
+    readonly attribute string name;
+};
+
+[scriptable, uuid(2cedf6f4-2590-4291-92cc-51cc8b128cd6)]
+interface nsIEveCorporation : nsISupports {
+    readonly attribute long id;
+    readonly attribute string name;
+    void getMembers(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveCharacter retv);
+};
+
+[scriptable, uuid(761e9733-364b-460e-8e3a-eb1d28fb5cd3)]
+interface nsIEveHRManager : nsISupports {
+    void getAllCorporations(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveCorporation retv);
+};
+

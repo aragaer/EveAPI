@@ -39,7 +39,6 @@ EveApiService.prototype = {
     },
 
     updateCorporationAssets:    function (id, key, charID, corpID) {
-        dump("Corp assets update requested\n");
         this.requester.refreshData('corpassets',
                 { wrappedJSObject:
                     {userID: id, apiKey: key, characterID: charID, owner: corpID}
@@ -50,25 +49,5 @@ EveApiService.prototype = {
 var components = [EveApiService];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
-}
-
-function processCharassets(data) {
-    var rows = evaluateXPath(data, "//row");
-    if (!ItemBuilder)
-        ItemBuilder = Cc["@aragaer/eve/item-builder;1"].
-                getService(Ci.nsIEveItemBuilder);
-    dump("Found "+rows.length+" items\n");
-    return rows.map(function (item) {
-        return ItemBuilder.createItem(
-            item.getAttribute('itemID'),
-            item.hasAttribute('locationID')
-                ? item.getAttribute('locationID')
-                : item.parentNode.parentNode.getAttribute('itemID'),
-            item.getAttribute('typeID'),
-            item.getAttribute('quantity'),
-            item.getAttribute('flag'),
-            item.getAttribute('singleton')
-        );
-    });
 }
 
