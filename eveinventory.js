@@ -52,6 +52,12 @@ const DataStatements = {
     getCatData:     'select categoryName from static.invCategories where categoryID=:id;',
     getGrpData:     'select groupName, categoryID from static.invGroups where groupID=:id;',
     getTypeData:    'select typeName, groupID from static.invTypes where typeID=:id;',
+    getItemName:    'select itemName from eveNames where itemID=:id',
+    setItemName:    'replace into eveNames (itemID, itemName, categoryID, groupID , typeID) ' +
+            'values (:id, :name, :cat, :group, :type);',
+    getStuffInside: 'select * from assets where container=:id',
+    getSystemName:  'select solarSystemName as name from mapSolarSystems where solarSystemID=:loc_id;',
+    getStationName: 'select stationName as name from staStations where stationID=:loc_id;',
 };
 
 function StmName(FuncName) "_"+FuncName+"Stm";
@@ -140,7 +146,6 @@ function eveitem(constructorType, data) {
         this._flag      = data.flag;
         this._singleton = data.singleton;
         this._childs    = null;
-//    this._name = EveDBService.getItemName(id);
         break;
     case 'fromStm':
         this._id        = data.row.id;
@@ -156,6 +161,31 @@ function eveitem(constructorType, data) {
         dump("!! Unknown eveitem constructor type:"+constructorType+" !!\n");
         break;
     }
+
+    let stm = IF._getItemNameStm;
+    stm.params.id = this._id;
+    try {
+        stm.step();
+        this._name = stm.row.itemName;
+    } catch (e) {
+        // Do nothing - no name?
+    } finally {
+        stm.reset();
+    }
+
+    this._childs = [];
+    let stm = IF._getStuffInsideStm;
+    stm.params.id = this._id;
+    try {
+        while (stm.step())
+            this._childs.push(new eveitem('fromStm', stm));
+    } catch (e) {
+        // Do nothing - out of items;
+    } finally {
+        stm.reset();
+    }
+    if (!this._childs.length)
+        this._childs = null;
 
     for each (ext in ExtraQI.item) {
         if (!ext.test(this, data))
@@ -180,8 +210,8 @@ eveitem.prototype = {
         throw Cr.NS_ERROR_NO_INTERFACE;
     },
 
-    toString:           function () this.type.name,
-    locationString:     function () "",
+    toString:           function () this._name || this._type.name,
+    locationString:     function () locationToString(this._location),
     containerString:    function () {
         return this._container
             ? this._container.toString()
@@ -199,7 +229,16 @@ eveitem.prototype = {
 
     get name()      this._name,
     set name(name)  {
-        return;
+        if (this._name == name)
+            return;
+        this._name = name;
+        let stm = IF._setItemNameStm;
+        stm.params.id = this._id;
+        stm.params.type = this._type.id;
+        stm.params.group = this._type.group.id;
+        stm.params.cat = this._type.group.category.id;
+        stm.params.name = this._name;
+        stm.executeAsync();
     },
 
     isContainer:        function () {
@@ -210,7 +249,7 @@ eveitem.prototype = {
         out.value = 0;
         if (!this._childs)
             return [];
-        var result = this._childs.slice(0);
+        var result = [i for each (i in this._childs)];
         out.value = result.length;
         return result;
     },
@@ -284,5 +323,38 @@ function NSGetModule(compMgr, fileSpec) {
 function columnList(stm) {
     for (let i = 0; i < stm.columnCount; i++)
         yield stm.getColumnName(i);
+}
+
+function locationToString(locationID) {
+    var result, stm;
+    switch (true) {
+    case locationID == 0:
+        return "";
+    case locationID >= 66000000 && locationID < 67000000:
+        locationID -= 6000001;
+    case locationID >= 60000000 && locationID <= 61000000:
+        stm = IF._getStationNameStm;
+        break;
+
+    case locationID >= 67000000 && locationID < 68000000:
+        locationID -= 6000000;
+    case locationID >= 60014860 && locatioID <= 60014929:
+    case locationID >= 61000000:
+        return "Some conquerable outpost";
+
+    default:
+        stm = IF._getSystemNameStm;
+        break;
+    };
+    stm.params.loc_id = locationID;
+    try {
+        stm.step();
+        result = stm.row.name;
+    } catch (e) {
+        dump(e.toString()+"\n");
+    } finally {
+        stm.reset();
+    }
+    return result;
 }
 

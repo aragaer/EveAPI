@@ -94,14 +94,6 @@ InventoryCallback.prototype = {
             stm.params.flag     = my_data.flag || 0;
             stm.params.singleton= my_data.singleton || 0;
             stm.executeAsync();
-/*
-            try {
-               var type = IS.getItemType(my_data.typeID);
-                dump(type.name +(my_data.quantity == 1 ? "" : " x"+my_data.quantity)+ "\n");
-            } catch (e) {
-                dump("Assets:"+e.toString()+"\n");
-            }
-*/
             var childs = doc.evaluate('child::rowset', row, null, 0, null).iterateNext();
             if (childs)
                 this._processAssetList(owner, childs, stm, doc);
