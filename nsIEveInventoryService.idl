@@ -1,3 +1,4 @@
+// vim:syn=xpidl
 #include "nsISupports.idl"
 #include "EveConstants.idl"
 
@@ -43,11 +44,9 @@ interface nsIEveItem : nsISupports {
 
 [scriptable, uuid(711dae78-b38a-40a7-93d5-acbc3bc9d51a)]
 interface nsIEveInventoryService : nsISupports {
-/*
-    void createItem(in long id, in long location, in nsIEveItem container,
-            in long typeID, in long quantity, in short flag,
-            in boolean singleton, [retval] out nsIEveItem item);
-*/
+    void addQI(in string iname, in nsISupports obj);
+    void createItem(in string constructorType, in nsISupports data,
+            [retval] out nsIEveItem retv);
     void getItemType(in long id, [retval] out nsIEveItemType type);
     void getItemGroup(in long id, [retval] out nsIEveItemGroup type);
     void getItemCategory(in long id, [retval] out nsIEveItemCategory type);

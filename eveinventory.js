@@ -1,4 +1,5 @@
 const Cc = Components.classes;
+const Cr = Components.results;
 const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -8,6 +9,10 @@ var gOS, gDB;
 const PreloadedTypes = {};
 const PreloadedGroups = {};
 const PreloadedCategories = {};
+
+const ExtraQI = {
+    'item': [], 'type': []
+};
 
 const IF = {
     getPreloaded:       function (storage, construct) {
@@ -90,17 +95,136 @@ function eveitemtype(typeid) {
     let {typeName: name, groupID: grpid} = IF.getTypeData(typeid);
     this._name = name;
     this._group = IF.getItemGroup(grpid);
+
+    for each (ext in ExtraQI.type) {
+        if (!ext.test(this))
+            continue;
+        ext.extend(this);
+        this._interfaces.push(ext.idn);
+    }
 }
 
 eveitemtype.prototype = {
     classDescription:   "EVE item type",
     classID:            Components.ID("{fb6bfcfe-5f16-4dc1-a78d-de5e4b766a26}"),
     contractID:         "@aragaer/eve/item-type;1",
-    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveItemType]),
+    QueryInterface:     function (iid) {
+        if (iid.equals(Ci.nsISupports) || iid.equals(Ci.nsIEveItemType))
+            return this;
+
+        for each (idn in this._interfaces)
+            if (iid.equals(Ci[idn]))
+                return this;
+
+        throw Cr.NS_ERROR_NO_INTERFACE;
+    },
+
+    _interfaces:        [],
 
     get id()            this._id,
     get name()          this._name,
     get group()         this._group,
+};
+
+function eveitem(constructorType, data) {
+    switch (constructorType) {
+    case 'fromWrappedObject':
+        data = data.wrappedJSObject;
+        /* fall-through */
+    case 'fromObject':
+        this._id        = data.id;
+        this._location  = data.location;
+        this._container = data.container;
+        this._type      = IF.getItemType(data.type);
+        this._quantity  = data.quantity;
+        this._flag      = data.flag;
+        this._singleton = data.singleton;
+        this._childs    = null;
+//    this._name = EveDBService.getItemName(id);
+        break;
+    case 'fromStm':
+        this._id        = data.row.id;
+        this._location  = data.row.location;
+        this._container = null;
+        this._type      = IF.getItemType(data.row.typeID);
+        this._quantity  = data.row.count;
+        this._flag      = data.row.flag;
+        this._singleton = data.row.singleton;
+        this._childs    = null;
+        break;
+    default:
+        dump("!! Unknown eveitem constructor type:"+constructorType+" !!\n");
+        break;
+    }
+
+    for each (ext in ExtraQI.item) {
+        if (!ext.test(this, data))
+            continue;
+        ext.extend(this, data);
+        this._interfaces.push(ext.idn);
+    }
+}
+
+eveitem.prototype = {
+    classDescription:   "EVE Item",
+    classID:            Components.ID("{658ce840-ac50-4429-97bd-a68e9327b884}"),
+    contractID:         "@aragaer/eve/item;1",
+    QueryInterface:     function (iid) {
+        if (iid.equals(Ci.nsISupports) || iid.equals(Ci.nsIEveItem))
+            return this;
+
+        for each (idn in this._interfaces)
+            if (iid.equals(Ci[idn]))
+                return this;
+
+        throw Cr.NS_ERROR_NO_INTERFACE;
+    },
+
+    toString:           function () this.type.name,
+    locationString:     function () "",
+    containerString:    function () {
+        return this._container
+            ? this._container.toString()
+            : '';
+    },
+    _interfaces:    [],
+
+    get id()        this._id,
+    get location()  this._location,
+    get container() this._container,
+    get type()      this._type,
+    get quantity()  this._quantity,
+    get flag()      this._flag,
+    get singleton() this._singleton,
+
+    get name()      this._name,
+    set name(name)  {
+        return;
+    },
+
+    isContainer:        function () {
+        return this._childs ? true : false;
+    },
+
+    getItemsInside:     function (out) {
+        out.value = 0;
+        if (!this._childs)
+            return [];
+        var result = this._childs.slice(0);
+        out.value = result.length;
+        return result;
+    },
+
+    addItem:            function (itm) {
+        if (!this._childs)
+            this._childs = {};
+        if (!this._childs['itm' + itm.id])
+            this._childs['itm' + itm.id] = itm;
+    },
+
+    removeItem:         function (itm) {
+        this._childs.delete('itm' + itm.id);
+    },
 };
 
 function eveinventory() {
@@ -118,7 +242,7 @@ eveinventory.prototype = {
         service: true
     }],
 
-    observe:        function (aSubject, aTopic, aData) {
+    observe:            function (aSubject, aTopic, aData) {
         switch (aTopic) {
         case 'app-startup':
             gOS.addObserver(this, 'eve-db-init', false);
@@ -132,6 +256,10 @@ eveinventory.prototype = {
                         'id integer, typeID integer, owner integer, ' +
                         'location integer, count integer, flag integer, ' +
                         'singleton integer, container integer, primary key (id)');
+            if (!this._conn.tableExists('eveNames'))
+                this._conn.createTable('eveNames',
+                        'itemID integer, itemName char, categoryID integer, ' +
+                        'groupID integer, typeID integer, primary key (itemID)');
 
             for (i in DataStatements)
                 IF[StmName(i)] = this._conn.createStatement(DataStatements[i]);
@@ -139,12 +267,16 @@ eveinventory.prototype = {
         }
     },
 
-    getItemCategory: IF.getItemCategory,
-    getItemGroup:    IF.getItemGroup,
-    getItemType:     IF.getItemType,
+    getItemCategory:    IF.getItemCategory,
+    getItemGroup:       IF.getItemGroup,
+    getItemType:        IF.getItemType,
+
+    createItem:         function (ct, data) new eveitem(ct, data),
+
+    addQI:              function (iname, obj) ExtraQI[iname].push(obj.wrappedJSObject),
 };
 
-var components = [eveinventory, eveitemcategory, eveitemgroup, eveitemtype];
+var components = [eveinventory, eveitemcategory, eveitemgroup, eveitemtype, eveitem];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

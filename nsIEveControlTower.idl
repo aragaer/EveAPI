@@ -1,0 +1,51 @@
+#include "nsISupports.idl"
+#include "nsIEveInventoryService.idl"
+interface nsIEveControlTowerType;
+interface nsIEveFuelType;
+
+typedef short nsEveFuelPurposeValue;
+
+[scriptable, uuid(a0b1bcee-fd9b-400e-b88d-086ec29f8350)]
+interface nsEveFuelPurpose {
+    const nsEveFuelPurposeValue PURPOSE_ONLINE = 1;
+    const nsEveFuelPurposeValue PURPOSE_POWER = 2;
+    const nsEveFuelPurposeValue PURPOSE_CPU = 3;
+    const nsEveFuelPurposeValue PURPOSE_REINFORCE = 4;
+};
+
+[scriptable, uuid(23165141-4cf6-47fc-9138-0abdf0d4176c)]
+interface nsIEveFuelType : nsISupports {
+    readonly attribute nsIEveControlTowerType tower;
+    readonly attribute nsEveFuelPurpose purpose;
+    readonly attribute long consumption;
+    readonly attribute nsIEveItemType type;
+    string toString();
+};
+
+[scriptable, uuid(dae45824-e81d-49a7-b716-edb9d01a15f0)]
+interface nsIEveControlTowerType : nsIEveItemType {
+    readonly attribute long powerGrid;
+    readonly attribute long CPU;
+    void getFuelRequirements(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveFuelType retv);
+    void getFuelForSystem(in long systemID, out unsigned long count,
+            [array, size_is(count), retval] out nsIEveFuelType retv);
+};
+
+[scriptable, uuid(8a8d5564-1efd-41c0-92b6-ef5c4a89ddc0)]
+interface nsIEveFuel : nsISupports {
+    readonly attribute nsIEveFuelType type;
+    readonly attribute long count;
+    readonly attribute long realConsumption;
+    string toString();
+    short hoursLeft();
+};
+
+[scriptable, uuid(82831d39-95c7-4e00-b66a-2c5f709d7005)]
+interface nsIEveControlTower : nsIEveItem {
+    readonly attribute long powerUsage;
+    readonly attribute long CPUUsage;
+    void getFuel(out unsigned long count,
+        [array, size_is(count), retval] out nsIEveFuel retv);
+};
+

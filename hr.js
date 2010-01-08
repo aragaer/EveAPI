@@ -3,9 +3,10 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-var gEAR, gDB, gOS;
+var gEAR, gDB, gOS, gEIS;
 const DataFactory = {
-    corpdata: { query:  'select * from corporations where id=:id' },
+    corpdata:   { query: 'select * from corporations where id=:id' },
+    assets:     { query: 'select * from assets where owner=:owner' },
 };
 
 function EveCorporation(id) {
@@ -27,11 +28,28 @@ EveCorporation.prototype = {
         out.value = 0;
         return [];
     },
+
+    getAssets:  function (out) {
+        var result = [];
+        let stm = DataFactory.assets.stm;
+        stm.params.owner = this._id;
+        try {
+            while (stm.step())
+                result.push(gEIS.createItem('fromStm', stm));
+        } catch (e) {
+            dump("Corporation "+this._name+" assets: "+e.toString()+"\n");
+        } finally {
+            stm.reset();
+        }
+        out.value = result.length;
+        return result;
+    },
 };
 
 function EveHRManager() {
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
+    gEIS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
 }
 
@@ -80,6 +98,8 @@ EveHRManager.prototype = {
         out.value = res.length;
         return res;
     },
+
+    getCorporation:         function (corpID) new EveCorporation(corpID),
 };
 
 var components = [EveHRManager, EveCorporation];
@@ -93,18 +113,18 @@ function columnList(stm) {
 }
 
 function createDataFunc(stmname) {
-        return function (id) {
-            var result = {};
-            var stm = DataFactory[stmname].stm;
-            try {
-                stm.params.id = id;
-                stm.step();
-                [result[col] = stm.row[col] for (col in columnList(stm))];
-            } catch (e) {
-                dump(e.toString()+"\n");
-            } finally {
-                stm.reset();
-            }
-            return result;
+    return function (id) {
+        var result = {};
+        var stm = DataFactory[stmname].stm;
+        try {
+            stm.params.id = id;
+            stm.step();
+            [result[col] = stm.row[col] for (col in columnList(stm))];
+        } catch (e) {
+            dump(e.toString()+"\n");
+        } finally {
+            stm.reset();
         }
+        return result;
     }
+}
