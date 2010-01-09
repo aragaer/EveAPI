@@ -6,11 +6,13 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 const EVEAPIURL = "http://api.eve-online.com";
 
 const EVEURLS = {
-    serverStatus:   { url: "/server/ServerStatus.xml.aspx", cb: [] },
-    characters:     { url: "/account/Characters.xml.aspx",  cb: [] },
-    charsheet:      { url: "/char/CharacterSheet.xml.aspx", cb: [] },
-    charassets:     { url: "/char/AssetList.xml.aspx",      cb: [] },
-    corpassets:     { url: "/corp/AssetList.xml.aspx",      cb: [] },
+    serverStatus:   "/server/ServerStatus.xml.aspx",
+    characters:     "/account/Characters.xml.aspx",
+    charsheet:      "/char/CharacterSheet.xml.aspx",
+    charassets:     "/char/AssetList.xml.aspx",
+    corpassets:     "/corp/AssetList.xml.aspx",
+    corptowers:     "/corp/StarbaseList.xml.aspx",
+    towerdetails:   "/corp/StarbaseDetail.xml.aspx",
 };
 
 var gOS;
@@ -20,7 +22,8 @@ function eveRequester() {
             getService(Ci.nsICacheService).createSession("EVE API",
                     Ci.nsICache.STORE_OFFLINE, true);
 
-    this._fromCache = this._fromCache_real;
+//    this._fromCache = this._fromCache_real;
+    this._fromCache = this._fromCache_null;
 
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
 }
@@ -41,7 +44,7 @@ eveRequester.prototype = {
             return;
         dump("refreshing data\n");
         var dwjso = data ? data.wrappedJSObject : null;
-        var res = this._fetchXML(EVEAPIURL+EVEURLS[type].url, data
+        var res = this._fetchXML(EVEAPIURL+EVEURLS[type], data
                 ? [i+'='+escape(dwjso[i]) for (i in dwjso)].join('&')
                 : '');
         if (res)
@@ -143,7 +146,26 @@ eveRequester.prototype = {
     },
 }
 
-var components = [eveRequester];
+function eveAuth(data) {
+    for (field in data)
+        this['_'+field] = data[field];
+}
+
+eveAuth.prototype = {
+    classDescription:   "EVE Online authentication token",
+    classID:            Components.ID("{5eaf7e07-9a14-4ba6-8439-2c1ce1c3a7a4}"),
+    contractID:         "@aragaer/eve/auth-token;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAuthToken]),
+
+    get accountID()     this._accountID,
+    get apiKey()        this._apiKey,
+    get type()          this._type,
+    get characterID()   this._characterID,
+}
+
+function authman() { }
+
+var components = [eveRequester, eveAuth];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

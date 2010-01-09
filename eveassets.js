@@ -29,7 +29,6 @@ InventoryCallback.prototype = {
             gOS.addObserver(this, 'eve-db-init', false);
             break;
         case 'eve-data':
-            dump("The data is ["+aData+"] the subject is "+aSubject.wrappedJSObject.doc+"\n");
             switch (aData) {
                 case 'charassets':
                 case 'corpassets':

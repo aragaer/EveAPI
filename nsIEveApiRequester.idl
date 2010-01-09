@@ -5,3 +5,28 @@ interface nsIEveApiRequester : nsISupports {
     void refreshData(in string type, in nsISupports data);
 };
 
+typedef short nsEveAuthTokenTypeValue;
+[scriptable, uuid(708f6d64-babc-4b11-9d80-1a41815739b9)]
+interface nsEveAuthTokenType {
+    const nsEveAuthTokenTypeValue TYPE_NOCHAR   = 0; /* no character ID supplied */
+    const nsEveAuthTokenTypeValue TYPE_LIMITED  = 1;
+    const nsEveAuthTokenTypeValue TYPE_FULL     = 2;
+    const nsEveAuthTokenTypeValue TYPE_DIRECTOR = 2; /* used for corp data */
+};
+
+[scriptable, uuid(87f3fe9b-6638-40da-b69f-e60163667b4a)]
+interface nsIEveAuthToken : nsISupports {
+    readonly attribute long accountID;
+    readonly attribute string apiKey;
+    readonly attribute nsEveAuthTokenType type;
+    readonly attribute long characterID;
+};
+
+[scriptable, uuid(a9e7ed2f-db32-475b-ac54-2006caa4b924)]
+interface nsIEveAuthManager : nsISupports {
+    void getTokenForChar(in nsEveAuthTokenType type,
+            [retval] out nsIEveAuthToken retv);
+    void getTokenForCorp(in nsEveAuthTokenType type,
+            [retval] out nsIEveAuthToken retv);
+};
+

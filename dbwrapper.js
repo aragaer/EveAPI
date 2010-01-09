@@ -23,7 +23,6 @@ dbwrapper.prototype = {
     createStatement:    function (q) this._conn.createStatement(q),
 
     observe:            function (aSubject, aTopic, aData) {
-        dump('Got '+aTopic+' event in dbwrapper\n');
         switch (aTopic) {
         case 'app-startup':
             gOS.addObserver(this, 'profile-after-change', false);

@@ -13,6 +13,16 @@ interface nsEveFuelPurpose {
     const nsEveFuelPurposeValue PURPOSE_REINFORCE = 4;
 };
 
+typedef short nsEveControlTowerStateValue;
+[scriptable, uuid(2cf2a18a-901d-4fde-8f82-742778bf2538)]
+interface nsEveControlTowerState {
+    const nsEveControlTowerStateValue STATE_UNANCHORED = 0;
+    const nsEveControlTowerStateValue STATE_OFFLINE    = 1;
+    const nsEveControlTowerStateValue STATE_ONLINING   = 2;
+    const nsEveControlTowerStateValue STATE_REINFORCED = 3;
+    const nsEveControlTowerStateValue STATE_ONLINE     = 4;
+};
+
 [scriptable, uuid(23165141-4cf6-47fc-9138-0abdf0d4176c)]
 interface nsIEveFuelType : nsISupports {
     readonly attribute nsIEveControlTowerType tower;
@@ -45,6 +55,11 @@ interface nsIEveFuel : nsISupports {
 interface nsIEveControlTower : nsIEveItem {
     readonly attribute long powerUsage;
     readonly attribute long CPUUsage;
+    readonly attribute nsEveControlTowerState state;
+    readonly attribute long moonID;
+    readonly attribute string moonName;
+    readonly attribute long stateStamp;
+    readonly attribute long onlineStamp;
     void getFuel(out unsigned long count,
         [array, size_is(count), retval] out nsIEveFuel retv);
 };

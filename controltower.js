@@ -20,7 +20,7 @@ function extend(to, from) {
     }
 }
 
-var gOS, gDB, gEIS;
+var gOS, gDB, gEIS, gEAR;
 const CTM = {};
 const DataStatements = {
     getFuelReqs:    "select resourceTypeID, purpose, quantity " +
@@ -45,6 +45,9 @@ const DataStatements = {
             "left join dgmTypeAttributes as a50 on lsc.itemType = a50.typeID " +
             "where lsc.starbaseID=:id " +
             "and a30.attributeID=30 and a50.attributeID=50;",
+    getPOSData:     "select state, moonID, onlineStamp, stateStamp, itemName from starbases " +
+            "left join mapDenormalize on starbases.moonID=mapDenormalize.itemID " +
+            "where starbaseID=:id;"
 };
 
 function StmName(FuncName) "_"+FuncName+"Stm";
@@ -120,18 +123,38 @@ function controltower(itemid) {
     } finally {
         stm.reset();
     }
+    let stm = CTM._getPOSDataStm;
+    stm.params.id = itemid;
+    try {
+        stm.step();
+        this._state = stm.row.state;
+        this._moonID = stm.row.moonID;
+        this._onlineStamp = Date.UTCFromEveTimeString(stm.row.onlineStamp)/1000;
+        this._stateStamp = Date.UTCFromEveTimeString(stm.row.stateStamp)/1000;
+        this._moonName = stm.row.itemName;
+    } catch (e) {
+        dump(e.toString()+"\n");
+    } finally {
+        stm.reset();
+    }
 }
 
 controltower.prototype = {
     idn:                'nsIEveControlTower',
     test:               function (obj, data)
-            obj._type.group.id == Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER,
+            obj._type.group.id == Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER
+            && obj._container == null,
     extend:             function (obj, data) {
         extend(obj, new controltower(obj._id));
     },
 
     get powerUsage()    this._powerUsage,
     get CPUUsage()      this._CPUUsage,
+    get state()         this._state,
+    get moonID()        this._moonID,
+    get onlineStamp()   this._onlineStamp,
+    get stateStamp()    this._stateStamp,
+    get moonName()      this._moonName,
     getFuel:            function (out) {
         var fuel = {};
         var reqs = this._type.getFuelRequirements({}).
@@ -207,6 +230,7 @@ function ControlTowerManager() {
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
     gEIS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
+    gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
 }
 
 ControlTowerManager.prototype = {
@@ -222,9 +246,20 @@ ControlTowerManager.prototype = {
     observe:            function (aSubject, aTopic, aData) {
         switch (aTopic) {
         case 'app-startup':
+            gOS.addObserver(this, 'eve-data', false);
             gOS.addObserver(this, 'eve-db-init', false);
             gEIS.addQI('item', {wrappedJSObject: controltower.prototype});
             gEIS.addQI('type', {wrappedJSObject: controltowertype.prototype});
+            break;
+        case 'eve-data':
+            switch (aData) {
+            case 'corptowers':
+                break;
+            case 'towerdetails':
+                break;
+            default:
+                break;
+            }
             break;
         case 'eve-db-init':
             this._conn = gDB.getConnection();
@@ -232,12 +267,18 @@ ControlTowerManager.prototype = {
                 this._conn.createTable('starbaseConfig',
                     'itemID integer, starbaseID integer, isOnline integer, ' +
                     'itemType integer, primary key (itemID)');
-            try {
+            if (!this._conn.tableExists('starbases'))
+                this._conn.createTable('starbases',
+                    'starbaseID integer, state integer, moonID integer, ' +
+                    'itemType integer, onlineStamp char, stateStamp char, ' +
+                    'primary key (starbaseID)');
+
             for (i in DataStatements)
-                CTM[StmName(i)] = this._conn.createStatement(DataStatements[i]);
-            } catch (e) {
-                dump(this._conn.lastErrorString+"\n");
-            }
+                try {
+                    CTM[StmName(i)] = this._conn.createStatement(DataStatements[i]);
+                } catch (e) {
+                    dump("Error in "+DataStatements[i]+"\n"+this._conn.lastErrorString+"\n");
+                }
             break;
         }
     },
@@ -246,5 +287,12 @@ ControlTowerManager.prototype = {
 var components = [ControlTowerManager, fueltype];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
+}
+
+Date.UTCFromEveTimeString = function (str) {
+    var d = str.split(/:| |-/);
+    d[1]--; // Month
+
+    return Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5]);
 }
 

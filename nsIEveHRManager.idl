@@ -1,5 +1,6 @@
 #include "nsISupports.idl"
 #include "nsIEveInventoryService.idl"
+#include "nsIEveControlTower.idl"
 
 interface nsIEveCorporation;
 [scriptable, uuid(b8922ed5-966c-4a92-b0d7-e89391b56cf3)]
@@ -18,6 +19,8 @@ interface nsIEveCorporation : nsISupports {
             [array, size_is(count), retval] out nsIEveCharacter retv);
     void getAssets(out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
+    void getControlTowers(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveControlTower retv);
 };
 
 [scriptable, uuid(761e9733-364b-460e-8e3a-eb1d28fb5cd3)]

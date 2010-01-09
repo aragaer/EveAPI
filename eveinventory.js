@@ -29,9 +29,12 @@ const IF = {
             var stm = obj[stmname];
             try {
                 stm.params.id = id;
-                stm.step();
-                [result[col] = stm.row[col] for (col in columnList(stm))];
+                if (stm.step())
+                    [result[col] = stm.row[col] for (col in columnList(stm))];
+                else /* No such object in our database */
+                    return null;
             } catch (e) {
+                dump("error in "+stmname+"\n");
                 dump(e.toString()+"\n");
             } finally {
                 stm.reset();
@@ -165,10 +168,10 @@ function eveitem(constructorType, data) {
     let stm = IF._getItemNameStm;
     stm.params.id = this._id;
     try {
-        stm.step();
-        this._name = stm.row.itemName;
+        if (stm.step())
+            this._name = stm.row.itemName;
     } catch (e) {
-        // Do nothing - no name?
+        dump(e.toString()+"\n");
     } finally {
         stm.reset();
     }
@@ -177,15 +180,19 @@ function eveitem(constructorType, data) {
     let stm = IF._getStuffInsideStm;
     stm.params.id = this._id;
     try {
-        while (stm.step())
-            this._childs.push(new eveitem('fromStm', stm));
+        while (stm.step()) {
+            var tmp = {};
+            [tmp[col] = stm.row[col] for (col in columnList(stm))]
+            this._childs.push({row:tmp});
+        }
     } catch (e) {
-        // Do nothing - out of items;
+        dump(e.toString()+"\n");
     } finally {
         stm.reset();
     }
-    if (!this._childs.length)
-        this._childs = null;
+    this._childs = this._childs.length
+        ? [new eveitem('fromStm', i) for each (i in this._childs)]
+        : null;
 
     for each (ext in ExtraQI.item) {
         if (!ext.test(this, data))
@@ -210,7 +217,7 @@ eveitem.prototype = {
         throw Cr.NS_ERROR_NO_INTERFACE;
     },
 
-    toString:           function () this._name || this._type.name,
+    toString:           function () this._type.name,
     locationString:     function () locationToString(this._location),
     containerString:    function () {
         return this._container
@@ -301,7 +308,11 @@ eveinventory.prototype = {
                         'groupID integer, typeID integer, primary key (itemID)');
 
             for (i in DataStatements)
-                IF[StmName(i)] = this._conn.createStatement(DataStatements[i]);
+                try {
+                    IF[StmName(i)] = this._conn.createStatement(DataStatements[i]);
+                } catch (e) {
+                    dump(e.toString()+"\n"+this._conn.lastErrorString+"\n");
+                }
             break;
         }
     },
@@ -328,7 +339,7 @@ function columnList(stm) {
 function locationToString(locationID) {
     var result, stm;
     switch (true) {
-    case locationID == 0:
+    case !locationID:
         return "";
     case locationID >= 66000000 && locationID < 67000000:
         locationID -= 6000001;
@@ -348,8 +359,10 @@ function locationToString(locationID) {
     };
     stm.params.loc_id = locationID;
     try {
-        stm.step();
-        result = stm.row.name;
+        if (stm.step())
+            result = stm.row.name;
+        else
+            result = "Unknown "+locationID;
     } catch (e) {
         dump(e.toString()+"\n");
     } finally {
