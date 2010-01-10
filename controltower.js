@@ -126,12 +126,13 @@ function controltower(itemid) {
     let stm = CTM._getPOSDataStm;
     stm.params.id = itemid;
     try {
-        stm.step();
-        this._state = stm.row.state;
-        this._moonID = stm.row.moonID;
-        this._onlineStamp = Date.UTCFromEveTimeString(stm.row.onlineStamp)/1000;
-        this._stateStamp = Date.UTCFromEveTimeString(stm.row.stateStamp)/1000;
-        this._moonName = stm.row.itemName;
+        if (stm.step()) {
+            this._state = stm.row.state;
+            this._moonID = stm.row.moonID;
+            this._onlineStamp = Date.UTCFromEveTimeString(stm.row.onlineStamp)/1000;
+            this._stateStamp = Date.UTCFromEveTimeString(stm.row.stateStamp)/1000;
+            this._moonName = stm.row.itemName;
+        }
     } catch (e) {
         dump(e.toString()+"\n");
     } finally {

@@ -3,10 +3,48 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-var gEAR, gDB, gOS, gEIS;
+var gEAR, gDB, gOS, gEIS, gHR;
 const DataFactory = {
     corpdata:   { query: 'select * from corporations where id=:id' },
+    chardata:   { query: 'select * from characters where id=:id' },
     assets:     { query: 'select * from assets where owner=:owner' },
+    members:    { query: 'select * from characters where corporation=:id' },
+};
+
+function EveCharacter(id) {
+    this._id = id;
+    let {name: name, corporation: corp, account: acct} = DataFactory.chardata.func(id);
+    this._name = name;
+    this._corporation = gHR.getCorporation(corp);
+    this._account = acct;
+}
+
+EveCharacter.prototype = {
+    classDescription:   "EVE Character",
+    classID:            Components.ID("{2595b442-53bf-4567-a3fc-0b8531253620}"),
+    contractID:         "@aragaer/eve-character;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveCharacter]),
+
+    get id()            this._id,
+    get name()          this._name,
+    get corporation()   this._corporation,
+    get account()       this._account,
+
+    getAssets:  function (out) {
+        var result = [];
+        let stm = DataFactory.assets.stm;
+        stm.params.owner = this._id;
+        try {
+            while (stm.step())
+                result.push(gEIS.createItem('fromStm', stm));
+        } catch (e) {
+            dump("Character "+this._name+" assets: "+e.toString()+"\n");
+        } finally {
+            stm.reset();
+        }
+        out.value = result.length;
+        return result;
+    },
 };
 
 function EveCorporation(id) {
@@ -25,8 +63,9 @@ EveCorporation.prototype = {
     get name()  this._name,
 
     getMembers: function (out) {
-        out.value = 0;
-        return [];
+        var result = [gHR.getCharacter(c.id) for each (c in DataFactory.members.func(this._id))];
+        out.value = result.length;
+        return result;
     },
 
     getAssets:  function (out) {
@@ -51,6 +90,7 @@ function EveHRManager() {
     gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
     gEIS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+    gHR = this;
 }
 
 EveHRManager.prototype = {
@@ -67,8 +107,9 @@ EveHRManager.prototype = {
         switch (aTopic) {
         case 'app-startup':
             gOS.addObserver(this, 'eve-db-init', false);
-            for (i in DataFactory)
-                DataFactory[i].func = createDataFunc(i);
+            DataFactory.corpdata.func = createDataFunc('corpdata');
+            DataFactory.chardata.func = createDataFunc('chardata');
+            DataFactory.members.func = createListFunc('members');
             break;
         case 'eve-db-init':
             this._conn = gDB.getConnection();
@@ -76,6 +117,10 @@ EveHRManager.prototype = {
                 this._conn.createTable('corporations',
                         'name char, ticker char, id integer, ' +
                         'alliance integer, primary key (id)');
+            if (!this._conn.tableExists('characters'))
+                this._conn.createTable('characters',
+                        'name char, id integer, account integer, ' +
+                        'corporation integer, primary key (id)');
 
             for each (i in DataFactory)
                 i.stm = this._conn.createStatement(i.query);
@@ -83,6 +128,9 @@ EveHRManager.prototype = {
             break;
         }
     },
+
+    _corporations:  {},
+    _characters:    {},
 
     getAllCorporations:     function (out) {
         var res = [];
@@ -99,10 +147,26 @@ EveHRManager.prototype = {
         return res;
     },
 
-    getCorporation:         function (corpID) new EveCorporation(corpID),
+    getCorporation:         function (corpID) {
+        if (!this._corporations['c'+corpID])
+            this._corporations['c'+corpID] = new EveCorporation(corpID);
+        return this._corporations['c'+corpID];
+    },
+
+    getCharacter:           function (charID) {
+        if (!this._characters['c'+charID])
+            this._characters['c'+charID] = new EveCharacter(charID);
+        return this._characters['c'+charID];
+    },
+
+    _getCharFromStmRow:     function (row) {
+        if (!this._characters['c'+row.id])
+            this._characters['c'+row.id] = new EveCharacter(stm.row.id);
+        return this._characters['c'+row.id];
+    },
 };
 
-var components = [EveHRManager, EveCorporation];
+var components = [EveHRManager, EveCorporation, EveCharacter];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }
@@ -128,3 +192,24 @@ function createDataFunc(stmname) {
         return result;
     }
 }
+
+function createListFunc(stmname) {
+    return function (id) {
+        var result = [];
+        var stm = DataFactory[stmname].stm;
+        try {
+            stm.params.id = id;
+            while (stm.step()) {
+                var result = {};
+                [result[col] = stm.row[col] for (col in columnList(stm))];
+                out.push(result);
+            }
+        } catch (e) {
+            dump(e.toString()+"\n");
+        } finally {
+            stm.reset();
+        }
+        return result;
+    }
+}
+

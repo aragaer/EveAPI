@@ -163,9 +163,90 @@ eveAuth.prototype = {
     get characterID()   this._characterID,
 }
 
+function StmName(FuncName) "_"+FuncName+"Stm";
+const AuthDataStm = {
+    getAcctKeys:    'select ltd, full from accounts where acct_id=:acct_id;',
+    getCharKeys:    'select ltd, full from characters ' +
+                "left join accounts on account=accounts.acct_id " +
+                "where characters.id=:char_id;",
+};
 function authman() { }
 
-var components = [eveRequester, eveAuth];
+authman.prototype = {
+    classDescription:   "EVE Online authentication manager",
+    classID:            Components.ID("{df6010ca-4902-43c1-a5f7-6d2aa86ddcad}"),
+    contractID:         "@aragaer/eve/auth-manager;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAuthManager, Ci.nsIObserver]),
+
+    _xpcom_categories: [{
+        category: "app-startup",
+        service: true
+    }],
+
+    observe:        function (aSubject, aTopic, aData) {
+        switch (aTopic) {
+        case 'app-startup':
+            gOS.addObserver(this, 'eve-db-init', false);
+            break;
+        case 'eve-db-init':
+            this._conn = gDB.getConnection();
+            if (!this._conn.tableExists('accounts'))
+                this._conn.createTable('accounts',
+                        'name char, id integer, acct_id integer, ltd char, ' +
+                        'full char, primary key (id)');
+
+            for (i in AuthDataStm)
+                try {
+                    this[StmName(i)] = this._conn.createStatement(AuthDataStm[i]);
+                } catch (e) {
+                    dump('Error in statement "' + AuthDataStm[i] + '": ' +
+                            this._conn.lastErrorString+"\n");
+                }
+            break;
+        }
+    },
+
+    _keyFromStm:            function (stm, type) {
+        var result;
+        try {
+            if (stm.step())
+                switch (type) {
+                case Ci.nsEveAuthTokenType.TYPE_NOCHAR:
+                case Ci.nsEveAuthTokenType.TYPE_LIMITED:
+                default:
+                    result = stm.row.ltd;
+                    break;
+                case Ci.nsEveAuthTokenType.TYPE_FULL:
+                case Ci.nsEveAuthTokenType.TYPE_DIRECTOR:
+                    result = stm.row.full;
+                    break;
+                }
+        } catch (e) {
+            dump(e.toString()+"\n");
+        } finally {
+            stm.reset();
+        }
+        return result;
+    }
+    getTokenForAccount:     function (account, type) {
+        let stm = this._getAcctKeysStm;
+        stm.params.acct_id = account;
+        let key = this._keyFromStm(stm, type);
+        return key
+            ? new eveAuth({accountID: account, type: type, apiKey: key})
+            : null;
+    },
+
+    getTokenForChar:        function (character, type)
+            this.getTokenForAccount(character.account, type),
+
+    getTokenForCorp:        function (corporation, type) {
+        var ch = corporation.getMembers()[0];
+        return this.getTokenForChar(ch, type);
+    },
+};
+
+var components = [eveRequester, eveAuth, authman];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

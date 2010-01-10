@@ -1,4 +1,5 @@
 #include "nsISupports.idl"
+#include "nsIEveHRManager.idl"
 
 [scriptable, uuid(07504627-1766-49a0-b2c8-fbf0e9a406b7)]
 interface nsIEveApiRequester : nsISupports {
@@ -24,9 +25,14 @@ interface nsIEveAuthToken : nsISupports {
 
 [scriptable, uuid(a9e7ed2f-db32-475b-ac54-2006caa4b924)]
 interface nsIEveAuthManager : nsISupports {
-    void getTokenForChar(in nsEveAuthTokenType type,
+    void getTokenForAccount(in long accountID,
+            in nsEveAuthTokenType type,
             [retval] out nsIEveAuthToken retv);
-    void getTokenForCorp(in nsEveAuthTokenType type,
+    void getTokenForChar(in nsIEveCharacter character,
+            in nsEveAuthTokenType type,
+            [retval] out nsIEveAuthToken retv);
+    void getTokenForCorp(in nsIEveCorporation corporation,
+            in nsEveAuthTokenType type,
             [retval] out nsIEveAuthToken retv);
 };
 

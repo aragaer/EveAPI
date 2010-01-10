@@ -9,6 +9,8 @@ interface nsIEveCharacter : nsISupports {
     readonly attribute long account;
     readonly attribute nsIEveCorporation corporation;
     readonly attribute string name;
+    void getAssets(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveItem retv);
 };
 
 [scriptable, uuid(2cedf6f4-2590-4291-92cc-51cc8b128cd6)]
@@ -28,5 +30,6 @@ interface nsIEveHRManager : nsISupports {
     void getAllCorporations(out unsigned long count,
             [array, size_is(count), retval] out nsIEveCorporation retv);
     void getCorporation(in long corpID, [retval] out nsIEveCorporation retv);
+    void getCharacter(in long charID, [retval] out nsIEveCharacter retv);
 };
 
