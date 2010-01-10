@@ -1,8 +1,11 @@
 #include "nsISupports.idl"
 #include "nsIEveInventoryService.idl"
+#include "EveConstants.idl"
 #include "nsIEveControlTower.idl"
 
 interface nsIEveCorporation;
+interface nsIEveAuthToken;
+interface nsEveAuthTokenType;
 [scriptable, uuid(b8922ed5-966c-4a92-b0d7-e89391b56cf3)]
 interface nsIEveCharacter : nsISupports {
     readonly attribute long id;
@@ -11,6 +14,8 @@ interface nsIEveCharacter : nsISupports {
     readonly attribute string name;
     void getAssets(out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
+    void getAuthToken(in nsEveAuthTokenTypeValue type,
+            [retval] out nsIEveAuthToken retv);
 };
 
 [scriptable, uuid(2cedf6f4-2590-4291-92cc-51cc8b128cd6)]
@@ -23,6 +28,8 @@ interface nsIEveCorporation : nsISupports {
             [array, size_is(count), retval] out nsIEveItem retv);
     void getControlTowers(out unsigned long count,
             [array, size_is(count), retval] out nsIEveControlTower retv);
+    void getAuthToken(in nsEveAuthTokenTypeValue type,
+            [retval] out nsIEveAuthToken retv);
 };
 
 [scriptable, uuid(761e9733-364b-460e-8e3a-eb1d28fb5cd3)]

@@ -21,3 +21,13 @@ interface nsEveItemGroupID {
     const nsEveItemGroupIDValue GROUP_CONTROL_TOWER = 365;
 };
 
+typedef short nsEveAuthTokenTypeValue;
+
+[scriptable, uuid(708f6d64-babc-4b11-9d80-1a41815739b9)]
+interface nsEveAuthTokenType {
+    const nsEveAuthTokenTypeValue TYPE_NOCHAR   = 0; /* no character ID supplied */
+    const nsEveAuthTokenTypeValue TYPE_LIMITED  = 1;
+    const nsEveAuthTokenTypeValue TYPE_FULL     = 2;
+    const nsEveAuthTokenTypeValue TYPE_DIRECTOR = 2; /* used for corp data */
+};
+

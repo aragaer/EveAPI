@@ -3,7 +3,7 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-var gEAR, gDB, gOS, gEIS, gHR;
+var gEAR, gDB, gOS, gEIS, gHR, gEAM;
 const DataFactory = {
     corpdata:   { query: 'select * from corporations where id=:id' },
     chardata:   { query: 'select * from characters where id=:id' },
@@ -45,6 +45,8 @@ EveCharacter.prototype = {
         out.value = result.length;
         return result;
     },
+
+    getAuthToken:       function (type) gEAM.getTokenForChar(this, type),
 };
 
 function EveCorporation(id) {
@@ -69,7 +71,18 @@ EveCorporation.prototype = {
     },
 
     getAssets:  function (out) {
-        var result = [];
+        var result = [], tok;
+        dump("Getting assets\n");
+        if (tok = gEAM.getTokenForCorp(this, Ci.nsEveAuthTokenType.TYPE_DIRECTOR))
+            gEAR.refreshData('corpassets', {wrappedJSObject: {
+                userID:     tok.accountID,
+                apiKey:     tok.apiKey,
+                characterID:tok.characterID,
+                owner:      this._id,
+            }});
+
+        dump("refreshed\n");
+
         let stm = DataFactory.assets.stm;
         stm.params.owner = this._id;
         try {
@@ -80,14 +93,18 @@ EveCorporation.prototype = {
         } finally {
             stm.reset();
         }
+        dump("done!\n");
         out.value = result.length;
         return result;
     },
+
+    getAuthToken:       function (type) gEAM.getTokenForCorp(this, type),
 };
 
 function EveHRManager() {
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
+    gEAM = Cc["@aragaer/eve/auth-manager;1"].getService(Ci.nsIEveAuthManager);
     gEIS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
     gHR = this;
@@ -195,7 +212,7 @@ function createDataFunc(stmname) {
 
 function createListFunc(stmname) {
     return function (id) {
-        var result = [];
+        var out = [];
         var stm = DataFactory[stmname].stm;
         try {
             stm.params.id = id;
@@ -209,7 +226,7 @@ function createListFunc(stmname) {
         } finally {
             stm.reset();
         }
-        return result;
+        return out;
     }
 }
 

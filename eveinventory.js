@@ -4,8 +4,9 @@ const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
-var gOS, gDB;
+var gOS, gDB, gEIS;
 
+const PreloadedItems = {};
 const PreloadedTypes = {};
 const PreloadedGroups = {};
 const PreloadedCategories = {};
@@ -135,6 +136,19 @@ eveitemtype.prototype = {
     get group()         this._group,
 };
 
+function getItemIdFromDatByCT(constructorType, data) {
+    switch (constructorType) {
+    case 'fromWrappedObject':
+        data = data.wrappedJSObject;
+    case 'fromObject':
+        return data.id;
+    case 'fromStm':
+        return data.row.id;
+    default:
+        return null;
+    };
+}
+
 function eveitem(constructorType, data) {
     switch (constructorType) {
     case 'fromWrappedObject':
@@ -176,9 +190,24 @@ function eveitem(constructorType, data) {
         stm.reset();
     }
 
-    this._childs = [];
+    var me = this;
     let stm = IF._getStuffInsideStm;
     stm.params.id = this._id;
+    stm.executeAsync({
+        handleError:        function (e) dump("" + e + "\n"),
+        handleCompletion:   function (aReason) {} ,
+        handleResult:       function (res) {
+            var childs = [];
+            me._childs = {};
+            while (row = res.getNextRow()) {
+                var tmp = {};
+                [tmp[col] = row.getResultByName(col) for (col in columnList(stm))]
+                childs.push({row:tmp});
+            }
+            [me._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
+        }
+    });
+/*
     try {
         while (stm.step()) {
             var tmp = {};
@@ -193,7 +222,7 @@ function eveitem(constructorType, data) {
     this._childs = this._childs.length
         ? [new eveitem('fromStm', i) for each (i in this._childs)]
         : null;
-
+*/
     for each (ext in ExtraQI.item) {
         if (!ext.test(this, data))
             continue;
@@ -276,6 +305,7 @@ eveitem.prototype = {
 function eveinventory() {
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+    gEIS = this;
 }
 
 eveinventory.prototype = {
@@ -321,7 +351,12 @@ eveinventory.prototype = {
     getItemGroup:       IF.getItemGroup,
     getItemType:        IF.getItemType,
 
-    createItem:         function (ct, data) new eveitem(ct, data),
+    createItem:         function (ct, data) {
+        var id = getItemIdFromDatByCT(ct, data);
+        if (!PreloadedItems['itm'+id])
+            PreloadedItems['itm'+id] = new eveitem(ct, data);
+        return PreloadedItems['itm'+id];
+    },
 
     addQI:              function (iname, obj) ExtraQI[iname].push(obj.wrappedJSObject),
 };

@@ -15,7 +15,7 @@ const EVEURLS = {
     towerdetails:   "/corp/StarbaseDetail.xml.aspx",
 };
 
-var gOS;
+var gOS, gDB;
 
 function eveRequester() {
     this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
@@ -47,10 +47,10 @@ eveRequester.prototype = {
         var res = this._fetchXML(EVEAPIURL+EVEURLS[type], data
                 ? [i+'='+escape(dwjso[i]) for (i in dwjso)].join('&')
                 : '');
-        if (res)
-            gOS.notifyObservers({
-                wrappedJSObject: {doc: res, aux: data}
-            }, 'eve-data', type);
+        if (!res)
+            return;
+        gOS.notifyObservers({ wrappedJSObject: {doc: res, aux: data} },
+                'eve-data', type);
     },
 
     _makeHash:          function (str) {
@@ -161,6 +161,7 @@ eveAuth.prototype = {
     get apiKey()        this._apiKey,
     get type()          this._type,
     get characterID()   this._characterID,
+    set characterID(id) this._characterID = id,
 }
 
 function StmName(FuncName) "_"+FuncName+"Stm";
@@ -170,7 +171,10 @@ const AuthDataStm = {
                 "left join accounts on account=accounts.acct_id " +
                 "where characters.id=:char_id;",
 };
-function authman() { }
+
+function authman() {
+    gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+}
 
 authman.prototype = {
     classDescription:   "EVE Online authentication manager",
@@ -227,7 +231,7 @@ authman.prototype = {
             stm.reset();
         }
         return result;
-    }
+    },
     getTokenForAccount:     function (account, type) {
         let stm = this._getAcctKeysStm;
         stm.params.acct_id = account;
@@ -237,12 +241,17 @@ authman.prototype = {
             : null;
     },
 
-    getTokenForChar:        function (character, type)
-            this.getTokenForAccount(character.account, type),
+    getTokenForChar:        function (character, type) {
+        var tok = this.getTokenForAccount(character.account, type);
+        tok.characterID = character.id;
+        return tok;
+    },
 
     getTokenForCorp:        function (corporation, type) {
-        var ch = corporation.getMembers()[0];
-        return this.getTokenForChar(ch, type);
+        var ch = corporation.getMembers({})[0];
+        return ch
+            ? this.getTokenForChar(ch, type)
+            : null;
     },
 };
 
