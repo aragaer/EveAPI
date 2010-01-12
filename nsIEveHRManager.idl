@@ -6,12 +6,22 @@
 interface nsIEveCorporation;
 interface nsIEveAuthToken;
 interface nsEveAuthTokenType;
+interface mozIStorageError;
+
+[scriptable, uuid(8030fbe1-bd1d-4859-8a7a-41ac1d603f8e)]
+interface nsEveAssetHandler : nsISupports {
+    void onItem(in nsIEveItem itm);
+    void onError(in mozIStorageError aError);
+    void onCompletion(in unsigned short aReason);
+};
+
 [scriptable, uuid(b8922ed5-966c-4a92-b0d7-e89391b56cf3)]
 interface nsIEveCharacter : nsISupports {
     readonly attribute long id;
     readonly attribute long account;
     readonly attribute nsIEveCorporation corporation;
     readonly attribute string name;
+    void getAssetsAsync(in nsEveAssetHandler handler);
     void getAssets(out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
     void getAuthToken(in nsEveAuthTokenTypeValue type,
@@ -24,6 +34,7 @@ interface nsIEveCorporation : nsISupports {
     readonly attribute string name;
     void getMembers(out unsigned long count,
             [array, size_is(count), retval] out nsIEveCharacter retv);
+    void getAssetsAsync(in nsEveAssetHandler handler);
     void getAssets(out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
     void getControlTowers(out unsigned long count,

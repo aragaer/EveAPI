@@ -32,8 +32,10 @@ const IF = {
                 stm.params.id = id;
                 if (stm.step())
                     [result[col] = stm.row[col] for (col in columnList(stm))];
-                else /* No such object in our database */
+                else {/* No such object in our database */
+                    dump("Object "+id+" not found in database with statement "+stmname+"\n")
                     return null;
+                }
             } catch (e) {
                 dump("error in "+stmname+"\n");
                 dump(e.toString()+"\n");
@@ -60,6 +62,7 @@ const DataStatements = {
     setItemName:    'replace into eveNames (itemID, itemName, categoryID, groupID , typeID) ' +
             'values (:id, :name, :cat, :group, :type);',
     getStuffInside: 'select * from assets where container=:id',
+    hasStuffInside: 'select count(*) as cnt from assets where container=:id',
     getSystemName:  'select solarSystemName as name from mapSolarSystems where solarSystemID=:loc_id;',
     getStationName: 'select stationName as name from staStations where stationID=:loc_id;',
 };
@@ -136,7 +139,8 @@ eveitemtype.prototype = {
     get group()         this._group,
 };
 
-function getItemIdFromDatByCT(constructorType, data) {
+function getItemIdFromDataByCT(constructorType, data) {
+    try {
     switch (constructorType) {
     case 'fromWrappedObject':
         data = data.wrappedJSObject;
@@ -144,9 +148,17 @@ function getItemIdFromDatByCT(constructorType, data) {
         return data.id;
     case 'fromStm':
         return data.row.id;
+    case 'fromRow':
+        return data.QueryInterface(Ci.mozIStorageRow).getResultByName('id');
     default:
         return null;
     };
+    } catch (e) {
+        dump(e.toString()+"\n");
+        dump("when getting id from "+data+" ("+constructorType+")\n");
+        dump(data.wrappedJSObject+"\n");
+        return null;
+    }
 }
 
 function eveitem(constructorType, data) {
@@ -174,6 +186,17 @@ function eveitem(constructorType, data) {
         this._singleton = data.row.singleton;
         this._childs    = null;
         break;
+    case 'fromRow':
+        data            = data.QueryInterface(Ci.mozIStorageRow);
+        this._id        = data.getResultByName('id');
+        this._location  = data.getResultByName('location');
+        this._container = null;
+        this._type      = IF.getItemType(data.getResultByName('typeID'));
+        this._quantity  = data.getResultByName('count');
+        this._flag      = data.getResultByName('flag');
+        this._singleton = data.getResultByName('singleton');
+        this._childs    = null;
+        break;
     default:
         dump("!! Unknown eveitem constructor type:"+constructorType+" !!\n");
         break;
@@ -189,7 +212,7 @@ function eveitem(constructorType, data) {
     } finally {
         stm.reset();
     }
-
+/*
     var me = this;
     let stm = IF._getStuffInsideStm;
     stm.params.id = this._id;
@@ -207,18 +230,18 @@ function eveitem(constructorType, data) {
             [me._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
         }
     });
-/*
+*/
+    let stm = IF._hasStuffInsideStm;
+    stm.params.id = this._id;
     try {
-        while (stm.step()) {
-            var tmp = {};
-            [tmp[col] = stm.row[col] for (col in columnList(stm))]
-            this._childs.push({row:tmp});
-        }
+        stm.step();
+        this._hasChilds = stm.row.cnt;
     } catch (e) {
         dump(e.toString()+"\n");
     } finally {
         stm.reset();
     }
+/*
     this._childs = this._childs.length
         ? [new eveitem('fromStm', i) for each (i in this._childs)]
         : null;
@@ -277,12 +300,34 @@ eveitem.prototype = {
         stm.executeAsync();
     },
 
-    isContainer:        function () {
-        return this._childs ? true : false;
+    isContainer:        function () this._hasChilds,
+
+    _fillChilds:        function () {
+        if (!this._hasChilds || this._childs)
+            return;
+        dump("Filling childs for "+this._id+"\n");
+        var me = this;
+        let stm = IF._getStuffInsideStm;
+        stm.params.id = this._id;
+        stm.executeAsync({
+            handleError:        function (e) dump("" + e + "\n"),
+            handleCompletion:   function (aReason) {} ,
+            handleResult:       function (res) {
+                var childs = [];
+                me._childs = {};
+                while (row = res.getNextRow()) {
+                    var tmp = {};
+                    [tmp[col] = row.getResultByName(col) for (col in columnList(stm))]
+                    childs.push({row:tmp});
+                }
+                [me._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
+            }
+        });
     },
 
     getItemsInside:     function (out) {
         out.value = 0;
+        this._fillChilds();
         if (!this._childs)
             return [];
         var result = [i for each (i in this._childs)];
@@ -291,6 +336,7 @@ eveitem.prototype = {
     },
 
     addItem:            function (itm) {
+        this._fillChilds();
         if (!this._childs)
             this._childs = {};
         if (!this._childs['itm' + itm.id])
@@ -298,6 +344,7 @@ eveitem.prototype = {
     },
 
     removeItem:         function (itm) {
+        this._fillChilds();
         this._childs.delete('itm' + itm.id);
     },
 };
@@ -352,8 +399,8 @@ eveinventory.prototype = {
     getItemType:        IF.getItemType,
 
     createItem:         function (ct, data) {
-        var id = getItemIdFromDatByCT(ct, data);
-        if (!PreloadedItems['itm'+id])
+        var id = getItemIdFromDataByCT(ct, data);
+        if (!PreloadedItems['itm'+id] && id)
             PreloadedItems['itm'+id] = new eveitem(ct, data);
         return PreloadedItems['itm'+id];
     },

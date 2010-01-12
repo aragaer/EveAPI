@@ -46,6 +46,29 @@ EveCharacter.prototype = {
         return result;
     },
 
+    getAssetsAsync: function (handler) {
+        var result = [], tok;
+        if (tok = gEAM.getTokenForChar(this, Ci.nsEveAuthTokenType.TYPE_FULL))
+            gEAR.refreshData('charassets', {wrappedJSObject: {
+                userID:     tok.accountID,
+                apiKey:     tok.apiKey,
+                characterID:tok.characterID,
+                owner:      this._id,
+            }});
+
+        let stm = DataFactory.assets.stm;
+        stm.params.owner = this._id;
+        stm.executeAsync({
+            handleError:        handler.onError,
+            handleCompletion:   handler.onCompletion,
+            handleResult:       function (r) {
+                while (row = r.getNextRow())
+                    handler.onItem(gEIS.createItem('fromRow', row));
+            },
+        });
+    },
+
+
     getAuthToken:       function (type) gEAM.getTokenForChar(this, type),
 };
 
@@ -68,6 +91,28 @@ EveCorporation.prototype = {
         var result = [gHR.getCharacter(c.id) for each (c in DataFactory.members.func(this._id))];
         out.value = result.length;
         return result;
+    },
+
+    getAssetsAsync: function (handler) {
+        var result = [], tok;
+        if (tok = gEAM.getTokenForCorp(this, Ci.nsEveAuthTokenType.TYPE_DIRECTOR))
+            gEAR.refreshData('corpassets', {wrappedJSObject: {
+                userID:     tok.accountID,
+                apiKey:     tok.apiKey,
+                characterID:tok.characterID,
+                owner:      this._id,
+            }});
+
+        let stm = DataFactory.assets.stm;
+        stm.params.owner = this._id;
+        stm.executeAsync({
+            handleError:        handler.onError,
+            handleCompletion:   handler.onCompletion,
+            handleResult:       function (r) {
+                while (row = r.getNextRow())
+                    handler.onItem(gEIS.createItem('fromRow', row));
+            },
+        });
     },
 
     getAssets:  function (out) {
