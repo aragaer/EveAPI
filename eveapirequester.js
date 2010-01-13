@@ -170,6 +170,8 @@ eveAuth.prototype = {
 function StmName(FuncName) "_"+FuncName+"Stm";
 const AuthDataStm = {
     getAcct:        'select * from accounts where acct_id=:acct_id;',
+    storeAcct:      'replace into accounts where acct_id=:acct_id;',
+    deleteAcct:     'delete from accounts where acct_id=:acct_id;',
     getAccts:       'select * from accounts;',
     getAcctChars:   'select * from characters where account=:acct_id;',
     getAcctKeys:    'select ltd, full from accounts where acct_id=:acct_id;',
@@ -286,8 +288,8 @@ eveacct.prototype = {
     contractID:         "@aragaer/eve/account;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAccount]),
 
-    store:              function () false,
-    delete:             function () false,
+    store:              function () dump("Store account "+this.accountID+"\n"),
+    delete:             function () dump("Delete account "+this.accountID+"\n"),
     initFromID:         function (id) {
         let stm = gAM._getAcctStm;
         stm.params.id = id;
