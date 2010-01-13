@@ -13,9 +13,10 @@ const EVEURLS = {
     corpassets:     "/corp/AssetList.xml.aspx",
     corptowers:     "/corp/StarbaseList.xml.aspx",
     towerdetails:   "/corp/StarbaseDetail.xml.aspx",
+    charcash:       "/char/AccountBalance.xml.aspx",
 };
 
-var gOS, gDB;
+var gOS, gDB, gHR, gEAR;
 
 function eveRequester() {
     this.cache_session = Cc["@mozilla.org/network/cache-service;1"].
@@ -26,6 +27,7 @@ function eveRequester() {
     this._fromCache = this._fromCache_null;
 
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    gEAR = this;
 }
 
 eveRequester.prototype = {
@@ -95,6 +97,7 @@ eveRequester.prototype = {
         if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
                 && cd.expirationTime*1000 > Date.now()) {       // And it is valid
             dump("Using cache now\n");
+            gOS.notifyObservers(null, 'eve-data-error', '');
             return this._fromCache(cd);
         }
  
@@ -166,14 +169,19 @@ eveAuth.prototype = {
 
 function StmName(FuncName) "_"+FuncName+"Stm";
 const AuthDataStm = {
+    getAcct:        'select * from accounts where acct_id=:acct_id;',
+    getAccts:       'select * from accounts;',
+    getAcctChars:   'select * from characters where account=:acct_id;',
     getAcctKeys:    'select ltd, full from accounts where acct_id=:acct_id;',
     getCharKeys:    'select ltd, full from characters ' +
                 "left join accounts on account=accounts.acct_id " +
                 "where characters.id=:char_id;",
 };
 
+var gAM;
 function authman() {
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+    gAM = this;
 }
 
 authman.prototype = {
@@ -253,9 +261,113 @@ authman.prototype = {
             ? this.getTokenForChar(ch, type)
             : null;
     },
+
+    getAccounts:      function (out) {
+        var result = [];
+        let stm = this._getAcctsStm;
+        try {
+            while (stm.step())
+                result.push((new eveacct())._initFromData(stm.row));
+        } catch (e) {
+            dump("Get all accounts: "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+        out.value = result.length;
+        return result;
+    },
 };
 
-var components = [eveRequester, eveAuth, authman];
+function eveacct() { }
+
+eveacct.prototype = {
+    classDescription:   "EVE Online account",
+    classID:            Components.ID("{8b787ff0-a7a2-4e6e-adee-09abaa4b80a3}"),
+    contractID:         "@aragaer/eve/account;1",
+    QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAccount]),
+
+    store:              function () false,
+    delete:             function () false,
+    initFromID:         function (id) {
+        let stm = gAM._getAcctStm;
+        stm.params.id = id;
+        try {
+            stm.step();
+            this.name = stm.row.name;
+            this.accountID = id;
+            this.keyFull = stm.row.ltd;
+            this.keyLimited = stm.row.full;
+        } catch (e) {
+            dump("Acct from id "+id+": "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+    },
+    _initFromData:      function (row) {
+        this.accountID = row.acct_id;
+        this.name = row.name;
+        this.keyFull = row.full;
+        this.keyLimited = row.ltd;
+        return this;
+    },
+    getCharacters:      function (out) {
+        var result = [];
+        if (!this.accountID) {
+            out.value = 0;
+            return [];
+        }
+        if (!gHR)
+            gHR = Cc["@aragaer/eve-hr-manager;1"].getService(Ci.nsIEveHRManager);
+        let stm = gAM._getAcctCharsStm;
+        stm.params.acct_id = this.accountID;
+        try {
+            while (stm.step())
+                result.push(gHR.getCharacter(stm.row.id));
+        } catch (e) {
+            dump("Get chars for account "+this.accountID+": "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+        out.value = result.length;
+        return result;
+    },
+
+    checkLimited:       function (handler) {
+        gOS.addObserver({
+            observe: function (aTopic, aSubject, aData) {
+                try {
+                gOS.removeObserver(this, 'eve-data-error');
+                dump("done checking limited key\n");
+                handler.processResult(aData == '');
+                } catch (e) { dump(""+e+"\n"); }
+            }
+        }, 'eve-data-error', false);
+        gEAR.refreshData('characters', {
+            wrappedJSObject: {userID: this.accountID, apiKey: this.keyLimited || this.keyFull}
+        });
+    },
+
+    checkFull:          function (handler) {
+        var ch = this.getCharacters({})[0];
+        if (!ch)
+            return handler.processResult(false);
+        gOS.addObserver({
+            observe: function (aTopic, aSubject, aData) {
+                try {
+                gOS.removeObserver(this, 'eve-data-error');
+                handler.processResult(aData == '');
+                dump("done checking full key\n");
+                } catch (e) { dump(""+e+"\n"); }
+            }
+        }, 'eve-data-error', false);
+        gEAR.refreshData('charcash', {
+            wrappedJSObject: {userID: this.accountID, apiKey: this.keyFull, characterID: ch.id}
+        });
+    },
+
+};
+
+var components = [eveRequester, eveAuth, authman, eveacct];
 function NSGetModule(compMgr, fileSpec) {
     return XPCOMUtils.generateModule(components);
 }

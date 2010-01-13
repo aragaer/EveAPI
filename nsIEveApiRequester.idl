@@ -15,8 +15,30 @@ interface nsIEveAuthToken : nsISupports {
     attribute long characterID;
 };
 
+[scriptable, function, uuid(1a7b151e-a85e-4c22-8a0f-d5e2e1961a81)]
+interface nsEveAcctCheckHandler : nsISupports {
+    void processResult(in boolean res);
+};
+
+[scriptable, uuid(6398455b-677b-405c-bd5a-c0cb990abdbb)]
+interface nsIEveAccount : nsISupports {
+    attribute string name;
+    attribute long accountID;
+    attribute string keyFull;
+    attribute string keyLimited;
+    void getCharacters(out unsigned long count,
+            [retval, array, size_is(count)] out nsIEveCharacter retv);
+    void initFromID(in long accountID);
+    void store();
+    void delete();
+    void checkLimited(in nsEveAcctCheckHandler handler);
+    void checkFull(in nsEveAcctCheckHandler handler);
+};
+
 [scriptable, uuid(a9e7ed2f-db32-475b-ac54-2006caa4b924)]
 interface nsIEveAuthManager : nsISupports {
+    void getAccounts(out unsigned long count,
+            [retval, array, size_is(count)] out nsIEveAccount retv);
     void getTokenForAccount(in long accountID,
             in nsEveAuthTokenTypeValue type,
             [retval] out nsIEveAuthToken retv);
