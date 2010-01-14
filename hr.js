@@ -191,15 +191,19 @@ EveHRManager.prototype = {
         }
     },
 
-    _corporations:  {},
+    _corporations:  null,
     _characters:    {},
 
     getAllCorporations:     function (out) {
         var res = [];
         let stm = this._getCorpListStm;
         try {
-            while (stm.step())
-                res.push(new EveCorporation(stm.row.id));
+            while (stm.step()) {
+                let corpID = stm.row.id;
+                if (!this._corporations['c'+corpID])
+                    this._corporations['c'+corpID] = new EveCorporation(corpID);
+                res.push(this._corporations['c'+corpID]);
+            }
         } catch (e) {
             dump("getAllCorporations:"+e.toString()+"\n");
         } finally {
@@ -210,8 +214,8 @@ EveHRManager.prototype = {
     },
 
     getCorporation:         function (corpID) {
-        if (!this._corporations['c'+corpID])
-            this._corporations['c'+corpID] = new EveCorporation(corpID);
+        if (!this._corporations)
+            this.getAllCorporations({});
         return this._corporations['c'+corpID];
     },
 

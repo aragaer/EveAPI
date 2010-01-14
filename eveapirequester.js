@@ -170,11 +170,11 @@ eveAuth.prototype = {
 function StmName(FuncName) "_"+FuncName+"Stm";
 const AuthDataStm = {
     getAcct:        'select * from accounts where acct_id=:acct_id;',
-    storeAcct:      'replace into accounts where acct_id=:acct_id;',
+    storeAcct:      'replace into accounts (name, acct_id, ltd, full) ' +
+            'values(:name, :accountID, :keyLimited, :keyFull)',
     deleteAcct:     'delete from accounts where acct_id=:acct_id;',
     getAccts:       'select * from accounts;',
     getAcctChars:   'select * from characters where account=:acct_id;',
-    getAcctKeys:    'select ltd, full from accounts where acct_id=:acct_id;',
     getCharKeys:    'select ltd, full from characters ' +
                 "left join accounts on account=accounts.acct_id " +
                 "where characters.id=:char_id;",
@@ -203,11 +203,15 @@ authman.prototype = {
             gOS.addObserver(this, 'eve-db-init', false);
             break;
         case 'eve-db-init':
+            try {
             this._conn = gDB.getConnection();
             if (!this._conn.tableExists('accounts'))
                 this._conn.createTable('accounts',
-                        'name char, id integer, acct_id integer, ltd char, ' +
-                        'full char, primary key (id)');
+                        'name char, acct_id integer, ltd char, full char, ' +
+                        'primary key (acct_id)');
+            } catch (e) {
+                dump(e.toString()+"\n"+this._conn.lastErrorString+"\n");
+            }
 
             for (i in AuthDataStm)
                 try {
@@ -243,7 +247,7 @@ authman.prototype = {
         return result;
     },
     getTokenForAccount:     function (account, type) {
-        let stm = this._getAcctKeysStm;
+        let stm = this._getAcctStm;
         stm.params.acct_id = account;
         let key = this._keyFromStm(stm, type);
         return key
@@ -253,7 +257,8 @@ authman.prototype = {
 
     getTokenForChar:        function (character, type) {
         var tok = this.getTokenForAccount(character.account, type);
-        tok.characterID = character.id;
+        if (tok)
+            tok.characterID = character.id;
         return tok;
     },
 
@@ -280,7 +285,12 @@ authman.prototype = {
     },
 };
 
-function eveacct() { }
+function eveacct() {
+    this.name = '';
+    this.accountID = 0;
+    this.keyLimited = '';
+    this.keyFull = '';
+}
 
 eveacct.prototype = {
     classDescription:   "EVE Online account",
@@ -288,8 +298,33 @@ eveacct.prototype = {
     contractID:         "@aragaer/eve/account;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAccount]),
 
-    store:              function () dump("Store account "+this.accountID+"\n"),
-    delete:             function () dump("Delete account "+this.accountID+"\n"),
+    store:              function () {
+        dump("Store account "+this.accountID+"\n");
+        let stm = gAM._storeAcctStm;
+        try {
+            for each (i in ['name', 'accountID', 'keyLimited', 'keyFull']) {
+                dump(i + " = " + this[i] + "\n");
+                stm.params[i] = this[i];
+            }
+            stm.execute();
+        } catch (e) {
+            dump("Store account "+this.name+": "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+    },
+    delete:             function () {
+        dump("Delete account "+this.accountID+"\n");
+        let stm = gAM._deleteAcctStm;
+        try {
+            stm.params.acct_id = this.accountID;
+            stm.execute();
+        } catch (e) {
+            dump("Delete account "+this.name+": "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+    },
     initFromID:         function (id) {
         let stm = gAM._getAcctStm;
         stm.params.id = id;
