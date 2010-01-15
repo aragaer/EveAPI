@@ -8,6 +8,7 @@ const DataFactory = {
     corpdata:   { query: 'select * from corporations where id=:id' },
     chardata:   { query: 'select * from characters where id=:id' },
     assets:     { query: 'select * from assets where owner=:owner' },
+    towers:     { query: 'select * from assets where owner=:owner and location is not NULL' },
     members:    { query: 'select * from characters where corporation=:id' },
 };
 
@@ -93,8 +94,13 @@ EveCorporation.prototype = {
         return result;
     },
 
-    getAssetsAsync: function (handler) {
-        var result = [], tok;
+    getControlTowersAsync:  function (handler)
+            this._getAssetsAsync(DataFactory.towers.stm, handler),
+    getAssetsAsync:         function (handler)
+            this._getAssetsAsync(DataFactory.assets.stm, handler),
+
+    _getAssetsAsync:        function (stm, handler) {
+        var tok;
         if (tok = gEAM.getTokenForCorp(this, Ci.nsEveAuthTokenType.TYPE_DIRECTOR))
             gEAR.refreshData('corpassets', {wrappedJSObject: {
                 userID:     tok.accountID,
@@ -103,7 +109,6 @@ EveCorporation.prototype = {
                 owner:      this._id,
             }});
 
-        let stm = DataFactory.assets.stm;
         stm.params.owner = this._id;
         stm.executeAsync({
             handleError:        handler.onError,
@@ -197,6 +202,8 @@ EveHRManager.prototype = {
     getAllCorporations:     function (out) {
         var res = [];
         let stm = this._getCorpListStm;
+        if (!this._corporations)
+            this._corporations = [];
         try {
             while (stm.step()) {
                 let corpID = stm.row.id;

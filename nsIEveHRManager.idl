@@ -37,6 +37,7 @@ interface nsIEveCorporation : nsISupports {
     void getAssetsAsync(in nsEveAssetHandler handler);
     void getAssets(out unsigned long count,
             [array, size_is(count), retval] out nsIEveItem retv);
+    void getControlTowersAsync(in nsEveAssetHandler handler);
     void getControlTowers(out unsigned long count,
             [array, size_is(count), retval] out nsIEveControlTower retv);
     void getAuthToken(in nsEveAuthTokenTypeValue type,
