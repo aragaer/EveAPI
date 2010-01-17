@@ -8,7 +8,11 @@ const DataFactory = {
     corpdata:   { query: 'select * from corporations where id=:id' },
     chardata:   { query: 'select * from characters where id=:id' },
     assets:     { query: 'select * from assets where owner=:owner' },
-    towers:     { query: 'select * from assets where owner=:owner and location is not NULL' },
+    structures: { query: 'select assets.* from assets ' +
+                    'left join static.invTypes as t on assets.typeID = t.typeID ' +
+                    'left join static.invGroups as g on t.groupID = g.groupID ' +
+                    'where location is not null and g.categoryID = 23 ' +
+                    'and owner=:owner' }, /* 23 is structures category */
     members:    { query: 'select * from characters where corporation=:id' },
 };
 
@@ -94,8 +98,18 @@ EveCorporation.prototype = {
         return result;
     },
 
-    getControlTowersAsync:  function (handler)
-            this._getAssetsAsync(DataFactory.towers.stm, handler),
+    getControlTowersAsync:  function (handler) {
+        this._getAssetsAsync(DataFactory.structures.stm, {
+            onItem:         function (itm) {
+                if (itm.type.group.id == Ci.nsEveItemGroupID.GROUP_CONTROL_TOWER)
+                    handler.onItem(itm);
+            },
+            onCompletion:   handler.onCompletion,
+            onError:        handler.onError,
+        });
+    },
+    getStructuresAsync:     function (handler)
+            this._getAssetsAsync(DataFactory.structures.stm, handler),
     getAssetsAsync:         function (handler)
             this._getAssetsAsync(DataFactory.assets.stm, handler),
 

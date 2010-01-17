@@ -62,5 +62,8 @@ interface nsIEveControlTower : nsIEveItem {
     readonly attribute long onlineStamp;
     void getFuel(out unsigned long count,
         [array, size_is(count), retval] out nsIEveFuel retv);
+    void addStructure(in nsIEveItem structure);
+    void removeStructure(in nsIEveItem structure);
+    void getAllStructuresAsync(in nsEveAssetHandler handler);
 };
 

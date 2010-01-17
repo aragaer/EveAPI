@@ -52,3 +52,11 @@ interface nsIEveInventoryService : nsISupports {
     void getItemCategory(in long id, [retval] out nsIEveItemCategory type);
 };
 
+interface mozIStorageError;
+[scriptable, uuid(8030fbe1-bd1d-4859-8a7a-41ac1d603f8e)]
+interface nsEveAssetHandler : nsISupports {
+    void onItem(in nsIEveItem itm);
+    void onError(in mozIStorageError aError);
+    void onCompletion(in unsigned short aReason);
+};
+

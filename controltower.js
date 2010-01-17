@@ -47,7 +47,11 @@ const DataStatements = {
             "and a30.attributeID=30 and a50.attributeID=50;",
     getPOSData:     "select state, moonID, onlineStamp, stateStamp, itemName from starbases " +
             "left join mapDenormalize on starbases.moonID=mapDenormalize.itemID " +
-            "where starbaseID=:id;"
+            "where starbaseID=:id;",
+    addStructure:   "replace into starbaseConfig (itemID, starbaseID, isOnline, itemType) " +
+            "values (:itemID, :starbaseID, :isOnline, :itemType);",
+    removeStructure:"delete from starbaseConfig where itemID=:itemID and starbaseID=:starbaseID;",
+    getStructures:  "select itemID from starbaseConfig where starbaseID=:starbaseID;",
 };
 
 function StmName(FuncName) "_"+FuncName+"Stm";
@@ -112,17 +116,6 @@ posfuel.prototype = {
 };
 
 function controltower(itemid) {
-    let stm = CTM._getGridCPUUsageStm;
-    stm.params.id = itemid;
-    try {
-        stm.executeStep();
-        this._powerGrid = stm.row.grid;
-        this._CPU = stm.row.cpu;
-    } catch (e) {
-        dump(e.toString()+"\n");
-    } finally {
-        stm.reset();
-    }
     let stm = CTM._getPOSDataStm;
     stm.params.id = itemid;
     try {
@@ -147,8 +140,22 @@ controltower.prototype = {
             && obj._container == null,
     extend:             function (obj, data) {
         extend(obj, new controltower(obj._id));
+        obj._refreshGridCPU();
     },
 
+    _refreshGridCPU:    function () {
+        let stm = CTM._getGridCPUUsageStm;
+        stm.params.id = this._id;
+        try {
+            stm.executeStep();
+            this._powerUsage = stm.row.grid;
+            this._CPUUsage = stm.row.cpu;
+        } catch (e) {
+            dump("Refresh grid cpu: "+e+"\n");
+        } finally {
+            stm.reset();
+        }
+    },
     get powerUsage()    this._powerUsage,
     get CPUUsage()      this._CPUUsage,
     get state()         this._state,
@@ -161,12 +168,44 @@ controltower.prototype = {
         var reqs = this._type.getFuelRequirements({}).
                 concat(this._type.getFuelForSystem(this._location, {}));
 
+        this._fillChilds();
         for each (i in this._childs)
             fuel['f'+i.type.id] = i.quantity;
 
         var res = [new posfuel(r, fuel['f'+r._type.id] || 0, this) for each (r in reqs)];
         out.value = res.length;
         return res;
+    },
+
+    addStructure:       function (itm) {
+        let stm = CTM._addStructureStm;
+        stm.params.itemID = itm.id;
+        stm.params.itemType = itm.type.id;
+        stm.params.isOnline = true;
+        stm.params.starbaseID = this._id;
+        stm.execute();
+        this._refreshGridCPU();
+    },
+
+    removeStructure:    function (itm) {
+        let stm = CTM._removeStructureStm;
+        stm.params.itemID = itm.id;
+        stm.params.starbaseID = this._id;
+        stm.execute();
+        this._refreshGridCPU();
+    },
+
+    getAllStructuresAsync:  function (handler) {
+        let stm = CTM._getStructuresStm;
+        stm.params.starbaseID = this._id;
+        stm.executeAsync({
+            handleError:        handler.onError,
+            handleCompletion:   handler.onCompletion,
+            handleResult:       function (r) {
+                while (row = r.getNextRow())
+                handler.onItem(gEIS.createItem('fromID', row.getResultByName('itemID')));
+            }
+        });
     },
 };
 

@@ -212,25 +212,7 @@ function eveitem(constructorType, data) {
     } finally {
         stm.reset();
     }
-/*
-    var me = this;
-    let stm = IF._getStuffInsideStm;
-    stm.params.id = this._id;
-    stm.executeAsync({
-        handleError:        function (e) dump("" + e + "\n"),
-        handleCompletion:   function (aReason) {} ,
-        handleResult:       function (res) {
-            var childs = [];
-            me._childs = {};
-            while (row = res.getNextRow()) {
-                var tmp = {};
-                [tmp[col] = row.getResultByName(col) for (col in columnList(stm))]
-                childs.push({row:tmp});
-            }
-            [me._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
-        }
-    });
-*/
+
     let stm = IF._hasStuffInsideStm;
     stm.params.id = this._id;
     try {
@@ -241,11 +223,7 @@ function eveitem(constructorType, data) {
     } finally {
         stm.reset();
     }
-/*
-    this._childs = this._childs.length
-        ? [new eveitem('fromStm', i) for each (i in this._childs)]
-        : null;
-*/
+
     for each (ext in ExtraQI.item) {
         if (!ext.test(this, data))
             continue;
@@ -305,24 +283,22 @@ eveitem.prototype = {
     _fillChilds:        function () {
         if (!this._hasChilds || this._childs)
             return;
-        dump("Filling childs for "+this._id+"\n");
-        var me = this;
+        this._childs = {};
         let stm = IF._getStuffInsideStm;
         stm.params.id = this._id;
-        stm.executeAsync({
-            handleError:        function (e) dump("" + e + "\n"),
-            handleCompletion:   function (aReason) {} ,
-            handleResult:       function (res) {
-                var childs = [];
-                me._childs = {};
-                while (row = res.getNextRow()) {
-                    var tmp = {};
-                    [tmp[col] = row.getResultByName(col) for (col in columnList(stm))]
-                    childs.push({row:tmp});
-                }
-                [me._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
+        try {
+            var childs = [];
+            while (stm.step()) {
+                var tmp = {};
+                [tmp[col] = stm.row[col] for (col in columnList(stm))];
+                childs.push({row:tmp});
             }
-        });
+            [this._childs['itm'+i.row.id] = gEIS.createItem('fromStm', i) for each (i in childs)];
+        } catch (e) {
+            dump("Creating childs for "+this._id+": "+e+"\n");
+        } finally {
+            stm.reset();
+        }
     },
 
     getItemsInside:     function (out) {
