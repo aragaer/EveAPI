@@ -137,6 +137,7 @@ eveitemtype.prototype = {
     get id()            this._id,
     get name()          this._name,
     get group()         this._group,
+    get category()      this._group.category,
 };
 
 function getItemIdFromDataByCT(constructorType, data) {
@@ -263,6 +264,9 @@ eveitem.prototype = {
     get quantity()  this._quantity,
     get flag()      this._flag,
     get singleton() this._singleton,
+
+    get group()     this._type.group,
+    get category()  this._type.category,
 
     get name()      this._name,
     set name(name)  {

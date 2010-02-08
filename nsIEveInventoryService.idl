@@ -20,6 +20,7 @@ interface nsIEveItemType : nsISupports {
     readonly attribute nsEveItemTypeIDValue id;
     readonly attribute string name;
     readonly attribute nsIEveItemGroup group;
+    readonly attribute nsIEveItemCategory category;
 };
 
 [scriptable, uuid(965384f6-8eb6-4173-a34b-4f6ce71a79bc)]
@@ -28,6 +29,8 @@ interface nsIEveItem : nsISupports {
     readonly attribute long location;
     readonly attribute nsIEveItem container;
     readonly attribute nsIEveItemType type;
+    readonly attribute nsIEveItemGroup group;
+    readonly attribute nsIEveItemCategory category;
     readonly attribute long quantity;
     readonly attribute short flag;
     readonly attribute boolean singleton;

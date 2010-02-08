@@ -26,6 +26,7 @@ typedef long nsEveItemCategoryIDValue;
 [scriptable, uuid(bbc8cd63-8c66-4a67-9840-e62f1dac7a51)]
 interface nsEveCategoryID {
     const nsEveItemCategoryIDValue CATEGORY_STRUCTURE = 23;
+    const nsEveItemCategoryIDValue CATEGORY_SKILL     = 16;
 };
 
 typedef short nsEveAuthTokenTypeValue;
