@@ -2,6 +2,7 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 const EVEAPIURL = "http://api.eve-online.com";
 
@@ -233,7 +234,6 @@ const AuthDataStm = {
 
 var gAM;
 function authman() {
-    gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
     gAM = this;
 }
 
@@ -251,15 +251,18 @@ authman.prototype = {
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
         case 'app-startup':
-            gOS.addObserver(this, 'eve-db-init', false);
+            Services.obs.addObserver(this, 'eve-db-init', false);
             break;
         case 'eve-db-init':
+            gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
             try {
-            this._conn = gDB.getConnection();
-            if (!this._conn.tableExists('accounts'))
-                this._conn.createTable('accounts',
-                        'name char, acct_id integer, ltd char, full char, ' +
-                        'primary key (acct_id)');
+                this._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
+                gDB.getConnection();
+                dump("Conn = "+this._conn+"\n");
+                if (!this._conn.tableExists('accounts'))
+                    this._conn.createTable('accounts',
+                            'name char, acct_id integer, ltd char, full char, ' +
+                            'primary key (acct_id)');
             } catch (e) {
                 dump(e.toString()+"\n"+this._conn.lastErrorString+"\n");
             }
@@ -456,9 +459,11 @@ eveacct.prototype = {
 };
 
 var components = [eveRequester, eveAuth, authman, eveacct];
-function NSGetModule(compMgr, fileSpec) {
-    return XPCOMUtils.generateModule(components);
-}
+
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+else
+    var NSGetModule = XPCOMUtils.generateNSGetModule(components);
 
 function evaluateXPath(aNode, aExpr) {
     var found = [];

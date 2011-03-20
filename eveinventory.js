@@ -353,7 +353,7 @@ eveinventory.prototype = {
                 IF[i] = IF.getDataById(IF, StmName(i));
             break;
         case 'eve-db-init':
-            this._conn = gDB.getConnection();
+            this._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
             if (!this._conn.tableExists('assets'))
                 this._conn.createTable('assets',
                         'id integer, typeID integer, owner integer, ' +
@@ -389,9 +389,10 @@ eveinventory.prototype = {
 };
 
 var components = [eveinventory, eveitemcategory, eveitemgroup, eveitemtype, eveitem];
-function NSGetModule(compMgr, fileSpec) {
-    return XPCOMUtils.generateModule(components);
-}
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+else
+    var NSGetModule = XPCOMUtils.generateNSGetModule(components);
 
 function columnList(stm) {
     for (let i = 0; i < stm.columnCount; i++)

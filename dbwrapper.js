@@ -2,12 +2,11 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-var gOS;
+Components.utils.import("resource://gre/modules/Services.jsm");
 
-function dbwrapper() {
-    gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-    this._conn = null;
-}
+const obs = Services.obs;
+
+function dbwrapper() { }
 
 dbwrapper.prototype = {
     classDescription:   "EVE Online static dump",
@@ -16,25 +15,28 @@ dbwrapper.prototype = {
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveDBService, Ci.nsIObserver]),
     _xpcom_categories: [{
         category:       'app-startup',
+        entry:          '@aragaer/eve/db;1',
         service:        true,
     }],
 
-    getConnection:      function () this._conn,
+    _conn:              null,
+
+    getConnection:      function () {dump("conn requested: "+this._conn+"\n"); return this._conn; },
     createStatement:    function (q) this._conn.createStatement(q),
 
     observe:            function (aSubject, aTopic, aData) {
         switch (aTopic) {
         case 'app-startup':
-            gOS.addObserver(this, 'profile-after-change', false);
-            gOS.addObserver(this, 'quit-application', false);
+            obs.addObserver(this, 'profile-after-change', false);
+            obs.addObserver(this, 'quit-application', false);
             break;
         case 'profile-after-change':
             this._init();
-            gOS.notifyObservers(null, 'eve-db-init', null);
+            obs.notifyObservers(this._conn, 'eve-db-init', null);
             break;
         case 'quit-application':
-            gOS.removeObserver(this, 'profile-after-change');
-            gOS.removeObserver(this, 'quit-application');
+            obs.removeObserver(this, 'profile-after-change');
+            obs.removeObserver(this, 'quit-application');
         }
     },
 
@@ -55,7 +57,7 @@ dbwrapper.prototype = {
         this._conn = Cc["@mozilla.org/storage/service;1"].
                 getService(Ci.mozIStorageService).
                 openDatabase(file);
- 
+
         this._initLocalDB();
 
         try {
@@ -85,12 +87,12 @@ dbwrapper.prototype = {
     _openStaticDB:      function () {
         var static = Cc["@mozilla.org/preferences-service;1"].
             getService(Ci.nsIPrefBranch).getCharPref("eve.static_dump_path");
+        dump(static+"\n");
         this._conn.executeSimpleSQL("attach database '"+static+"' as static\n")
     },
 }
 
 var components = [dbwrapper];
-function NSGetModule(compMgr, fileSpec) {
-    return XPCOMUtils.generateModule(components);
-}
+
+var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
 

@@ -10,5 +10,5 @@ JS_FILES+=controltower.js
 JS_FILES+=hr.js
 JS_FILES+=eveassets.js
 JS_FILES+=eveinventory.js
-comp_DATA=$(JS_FILES) $(XPT_FILES)
+comp_DATA=eveapi.manifest $(JS_FILES) $(XPT_FILES)
 pref_DATA=api_pref.js

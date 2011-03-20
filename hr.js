@@ -186,6 +186,7 @@ EveHRManager.prototype = {
 
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
+        case 'profile-after-change':
         case 'app-startup':
             gOS.addObserver(this, 'eve-db-init', false);
             DataFactory.corpdata.func = createDataFunc('corpdata');
@@ -254,9 +255,11 @@ EveHRManager.prototype = {
 };
 
 var components = [EveHRManager, EveCorporation, EveCharacter];
-function NSGetModule(compMgr, fileSpec) {
-    return XPCOMUtils.generateModule(components);
-}
+
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+else
+    var NSGetModule = XPCOMUtils.generateNSGetModule(components);
 
 function columnList(stm) {
     for (let i = 0; i < stm.columnCount; i++)

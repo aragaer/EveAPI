@@ -1,0 +1,53 @@
+interfaces EveConstants.xpt
+interfaces nsIEveApiRequester.xpt
+interfaces nsIEveApiService.xpt
+interfaces nsIEveControlTower.xpt
+interfaces nsIEveDBService.xpt
+interfaces nsIEveHRManager.xpt
+interfaces nsIEveInventoryService.xpt
+
+#dbwrapper
+component {66575bef-61c0-4ea3-9c34-17c10870e6a9} dbwrapper.js
+contract @aragaer/eve/db;1 {66575bef-61c0-4ea3-9c34-17c10870e6a9}
+category app-startup dbwrapper @aragaer/eve/db;1
+
+#api service
+component {6f7ee12b-12b3-4101-a4c9-ecdc97c51421} eveapiservice.js
+contract @aragaer/eve-api;1 {6f7ee12b-12b3-4101-a4c9-ecdc97c51421}
+
+#requester
+component {4ba2f4f7-12bc-4194-81ee-fc5e434e8073} eveapirequester.js
+contract @aragaer/eve/api-requester;1 {4ba2f4f7-12bc-4194-81ee-fc5e434e8073}
+
+component {df6010ca-4902-43c1-a5f7-6d2aa86ddcad} eveapirequester.js
+contract @aragaer/eve/auth-manager;1 {df6010ca-4902-43c1-a5f7-6d2aa86ddcad}
+category app-startup authman @aragaer/eve/auth-manager;1
+
+#hr
+component {01844e7a-b187-4411-b687-ec4cccb38cd4} hr.js
+contract @aragaer/eve-hr-manager;1 {01844e7a-b187-4411-b687-ec4cccb38cd4}
+category profile-after-change EveHRManager @aragaer/eve-hr-manager;1
+
+component {2595b442-53bf-4567-a3fc-0b8531253620} hr.js
+contract @aragaer/eve-character;1 {2595b442-53bf-4567-a3fc-0b8531253620}
+
+component {ab672ffc-b203-4e54-b231-1b6ea9365bac} hr.js
+contract @aragaer/eve-corporation;1 {ab672ffc-b203-4e54-b231-1b6ea9365bac}
+
+#inventory
+component {ef3555fb-be5d-43c9-83ab-d3e8d5432f43} eveinventory.js
+contract @aragaer/eve/item-category;1 {ef3555fb-be5d-43c9-83ab-d3e8d5432f43}
+
+component {5e922507-10b0-4fee-b8df-9f95df29a28a} eveinventory.js
+contract @aragaer/eve/item-group;1 {5e922507-10b0-4fee-b8df-9f95df29a28a}
+
+component {fb6bfcfe-5f16-4dc1-a78d-de5e4b766a26} eveinventory.js
+contract @aragaer/eve/item-type;1 {fb6bfcfe-5f16-4dc1-a78d-de5e4b766a26}
+
+component {658ce840-ac50-4429-97bd-a68e9327b884} eveinventory.js
+contract @aragaer/eve/item;1 {658ce840-ac50-4429-97bd-a68e9327b884}
+
+component {e5dc59a4-217e-46da-8c9f-d6de36df2d3f} eveinventory.js
+contract @aragaer/eve/inventory;1 {e5dc59a4-217e-46da-8c9f-d6de36df2d3f}
+category app-startup eveinventory @aragaer/eve/inventory;1
+

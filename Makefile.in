@@ -160,7 +160,7 @@ XPT_FILES = nsIEveApiRequester.xpt nsIEveApiService.xpt \
 	nsIEveDBService.xpt EveConstants.xpt \
 	nsIEveInventoryService.xpt nsIEveHRManager.xpt \
 	nsIEveControlTower.xpt
-comp_DATA = $(JS_FILES) $(XPT_FILES)
+comp_DATA = eveapi.manifest $(JS_FILES) $(XPT_FILES)
 pref_DATA = api_pref.js
 all: all-am
 
