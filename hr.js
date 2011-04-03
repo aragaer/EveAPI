@@ -236,6 +236,25 @@ EveHRManager.prototype = {
         return res;
     },
 
+    getAllCharacters:       function (out) {
+        var res = [];
+        let stm = gHR._getCharListStm;
+        try {
+            while (stm.step()) {
+                let charID = stm.row.id;
+                if (!gHR._characters['c'+charID])
+                    gHR._characters['c'+charID] = new EveCharacter(corpID);
+                res.push(gHR._characters['c'+charID]);
+            }
+        } catch (e) {
+            dump("getAllCharacters:"+e.toString()+"\n");
+        } finally {
+            stm.reset;
+        }
+        out.value = res.length;
+        return res;
+    },
+
     getCorporation:         function (corpID) {
         if (!gHR._corporations)
             gHR.getAllCorporations({});
@@ -267,6 +286,7 @@ function hr_init() {
     for each (var i in DataFactory)
         i.stm = gHR._conn.createStatement(i.query);
     gHR._getCorpListStm = gHR._conn.createStatement('select id from corporations;');
+    gHR._getCharListStm = gHR._conn.createStatement('select id from characters;');
 }
 
 var components = [EveHRManager, EveCorporation, EveCharacter];

@@ -43,5 +43,7 @@ interface nsIEveHRManager : nsISupports {
             [array, size_is(count), retval] out nsIEveCorporation retv);
     void getCorporation(in long corpID, [retval] out nsIEveCorporation retv);
     void getCharacter(in long charID, [retval] out nsIEveCharacter retv);
+    void getAllCharacters(out unsigned long count,
+            [array, size_is(count), retval] out nsIEveCharacter retv);
 };
 
