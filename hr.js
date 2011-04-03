@@ -2,6 +2,7 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 var gEAR, gDB, gOS, gEIS, gHR, gEAM;
 const DataFactory = {
@@ -11,8 +12,9 @@ const DataFactory = {
     structures: { query: 'select assets.* from assets ' +
                     'left join static.invTypes as t on assets.typeID = t.typeID ' +
                     'left join static.invGroups as g on t.groupID = g.groupID ' +
-                    'where location is not null and g.categoryID = 23 ' +
-                    'and owner=:owner' }, /* 23 is structures category */
+                    'where location is not null and ' +
+                    'g.categoryID = ' + Ci.nsEveCategoryID.CATEGORY_STRUCTURE + ' ' +
+                    'and owner=:owner' },
     members:    { query: 'select * from characters where corporation=:id' },
 };
 
@@ -93,7 +95,7 @@ EveCorporation.prototype = {
     get name()  this._name,
 
     getMembers: function (out) {
-        var result = [gHR.getCharacter(c.id) for each (c in DataFactory.members.func(this._id))];
+        var result = [gHR.getCharacter(c.id) for each (var c in DataFactory.members.func(this._id))];
         out.value = result.length;
         return result;
     },
@@ -168,11 +170,16 @@ EveCorporation.prototype = {
 function EveHRManager() {
     if (gHR)
         return;
-    gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
     gEAM = Cc["@aragaer/eve/auth-manager;1"].getService(Ci.nsIEveAuthManager);
     gEIS = Cc["@aragaer/eve/inventory;1"].getService(Ci.nsIEveInventoryService);
     gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+    try {
+        gHR._conn = gDB.getConnection();
+        hr_init();
+    } catch (e) {
+        Services.obs.addObserver(this, 'eve-db-init', false);
+    }
     gHR = this;
 }
 
@@ -189,25 +196,18 @@ EveHRManager.prototype = {
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
         case 'app-startup':
-            gOS.addObserver(this, 'eve-db-init', false);
+            Services.obs.addObserver(this, 'eve-db-init', false);
             DataFactory.corpdata.func = createDataFunc('corpdata');
             DataFactory.chardata.func = createDataFunc('chardata');
             DataFactory.members.func = createListFunc('members');
             break;
         case 'eve-db-init':
-            gHR._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
-            if (!gHR._conn.tableExists('corporations'))
-                gHR._conn.createTable('corporations',
-                        'name char, ticker char, id integer, ' +
-                        'alliance integer, primary key (id)');
-            if (!gHR._conn.tableExists('characters'))
-                gHR._conn.createTable('characters',
-                        'name char, id integer, account integer, ' +
-                        'corporation integer, primary key (id)');
-
-            for each (i in DataFactory)
-                i.stm = gHR._conn.createStatement(i.query);
-            gHR._getCorpListStm = gHR._conn.createStatement('select id from corporations;');
+            try {
+                gHR._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
+                hr_init();
+            } catch (e) {
+                dump("Error in 'eve-db-init' in hr: "+e+"\n");
+            }
             break;
         }
     },
@@ -247,13 +247,27 @@ EveHRManager.prototype = {
             gHR._characters['c'+charID] = new EveCharacter(charID);
         return gHR._characters['c'+charID];
     },
-
-    _getCharFromStmRow:     function (row) {
-        if (!gHR._characters['c'+row.id])
-            gHR._characters['c'+row.id] = new EveCharacter(stm.row.id);
-        return gHR._characters['c'+row.id];
-    },
 };
+
+function _getCharFromStmRow(row) {
+    if (!gHR._characters['c'+row.id])
+        gHR._characters['c'+row.id] = new EveCharacter(stm.row.id);
+    return gHR._characters['c'+row.id];
+}
+
+function hr_init() {
+    if (!gHR._conn.tableExists('corporations'))
+        gHR._conn.createTable('corporations',
+            'name char, ticker char, id integer, ' +
+            'alliance integer, primary key (id)');
+    if (!gHR._conn.tableExists('characters'))
+        gHR._conn.createTable('characters',
+            'name char, id integer, account integer, ' +
+            'corporation integer, primary key (id)');
+    for each (var i in DataFactory)
+        i.stm = gHR._conn.createStatement(i.query);
+    gHR._getCorpListStm = gHR._conn.createStatement('select id from corporations;');
+}
 
 var components = [EveHRManager, EveCorporation, EveCharacter];
 
@@ -268,7 +282,6 @@ function columnList(stm) {
 }
 
 function createDataFunc(stmname) {
-    dump("creating function for "+stmname+"\n");
     return function (id) {
         var result = {};
         var stm = DataFactory[stmname].stm;
