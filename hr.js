@@ -95,7 +95,7 @@ EveCorporation.prototype = {
     get name()  this._name,
 
     getMembers: function (out) {
-        var result = [gHR.getCharacter(c.id) for each (var c in DataFactory.members.func(this._id))];
+        var result = [gHR.getCharacter(c.id) for each (c in DataFactory.members.func(this._id))];
         out.value = result.length;
         return result;
     },
