@@ -166,6 +166,8 @@ EveCorporation.prototype = {
 };
 
 function EveHRManager() {
+    if (gHR)
+        return;
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gEAR = Cc["@aragaer/eve/api-requester;1"].getService(Ci.nsIEveApiRequester);
     gEAM = Cc["@aragaer/eve/auth-manager;1"].getService(Ci.nsIEveAuthManager);
@@ -186,7 +188,6 @@ EveHRManager.prototype = {
 
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
-        case 'profile-after-change':
         case 'app-startup':
             gOS.addObserver(this, 'eve-db-init', false);
             DataFactory.corpdata.func = createDataFunc('corpdata');
@@ -194,19 +195,19 @@ EveHRManager.prototype = {
             DataFactory.members.func = createListFunc('members');
             break;
         case 'eve-db-init':
-            this._conn = gDB.getConnection();
-            if (!this._conn.tableExists('corporations'))
-                this._conn.createTable('corporations',
+            gHR._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
+            if (!gHR._conn.tableExists('corporations'))
+                gHR._conn.createTable('corporations',
                         'name char, ticker char, id integer, ' +
                         'alliance integer, primary key (id)');
-            if (!this._conn.tableExists('characters'))
-                this._conn.createTable('characters',
+            if (!gHR._conn.tableExists('characters'))
+                gHR._conn.createTable('characters',
                         'name char, id integer, account integer, ' +
                         'corporation integer, primary key (id)');
 
             for each (i in DataFactory)
-                i.stm = this._conn.createStatement(i.query);
-            this._getCorpListStm = this._conn.createStatement('select id from corporations;');
+                i.stm = gHR._conn.createStatement(i.query);
+            gHR._getCorpListStm = gHR._conn.createStatement('select id from corporations;');
             break;
         }
     },
@@ -216,15 +217,15 @@ EveHRManager.prototype = {
 
     getAllCorporations:     function (out) {
         var res = [];
-        let stm = this._getCorpListStm;
-        if (!this._corporations)
-            this._corporations = [];
+        let stm = gHR._getCorpListStm;
+        if (!gHR._corporations)
+            gHR._corporations = [];
         try {
             while (stm.step()) {
                 let corpID = stm.row.id;
-                if (!this._corporations['c'+corpID])
-                    this._corporations['c'+corpID] = new EveCorporation(corpID);
-                res.push(this._corporations['c'+corpID]);
+                if (!gHR._corporations['c'+corpID])
+                    gHR._corporations['c'+corpID] = new EveCorporation(corpID);
+                res.push(gHR._corporations['c'+corpID]);
             }
         } catch (e) {
             dump("getAllCorporations:"+e.toString()+"\n");
@@ -236,21 +237,21 @@ EveHRManager.prototype = {
     },
 
     getCorporation:         function (corpID) {
-        if (!this._corporations)
-            this.getAllCorporations({});
-        return this._corporations['c'+corpID];
+        if (!gHR._corporations)
+            gHR.getAllCorporations({});
+        return gHR._corporations['c'+corpID];
     },
 
     getCharacter:           function (charID) {
-        if (!this._characters['c'+charID])
-            this._characters['c'+charID] = new EveCharacter(charID);
-        return this._characters['c'+charID];
+        if (!gHR._characters['c'+charID])
+            gHR._characters['c'+charID] = new EveCharacter(charID);
+        return gHR._characters['c'+charID];
     },
 
     _getCharFromStmRow:     function (row) {
-        if (!this._characters['c'+row.id])
-            this._characters['c'+row.id] = new EveCharacter(stm.row.id);
-        return this._characters['c'+row.id];
+        if (!gHR._characters['c'+row.id])
+            gHR._characters['c'+row.id] = new EveCharacter(stm.row.id);
+        return gHR._characters['c'+row.id];
     },
 };
 
@@ -267,6 +268,7 @@ function columnList(stm) {
 }
 
 function createDataFunc(stmname) {
+    dump("creating function for "+stmname+"\n");
     return function (id) {
         var result = {};
         var stm = DataFactory[stmname].stm;

@@ -26,7 +26,7 @@ category app-startup authman @aragaer/eve/auth-manager;1
 #hr
 component {01844e7a-b187-4411-b687-ec4cccb38cd4} hr.js
 contract @aragaer/eve-hr-manager;1 {01844e7a-b187-4411-b687-ec4cccb38cd4}
-category profile-after-change EveHRManager @aragaer/eve-hr-manager;1
+category app-startup EveHRManager @aragaer/eve-hr-manager;1
 
 component {2595b442-53bf-4567-a3fc-0b8531253620} hr.js
 contract @aragaer/eve-character;1 {2595b442-53bf-4567-a3fc-0b8531253620}

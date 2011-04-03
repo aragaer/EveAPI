@@ -234,7 +234,8 @@ const AuthDataStm = {
 
 var gAM;
 function authman() {
-    gAM = this;
+    if (!gAM)
+        gAM = this;
 }
 
 authman.prototype = {
@@ -242,11 +243,6 @@ authman.prototype = {
     classID:            Components.ID("{df6010ca-4902-43c1-a5f7-6d2aa86ddcad}"),
     contractID:         "@aragaer/eve/auth-manager;1",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveAuthManager, Ci.nsIObserver]),
-
-    _xpcom_categories: [{
-        category: "app-startup",
-        service: true
-    }],
 
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
@@ -256,23 +252,21 @@ authman.prototype = {
         case 'eve-db-init':
             gDB = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
             try {
-                this._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
-                gDB.getConnection();
-                dump("Conn = "+this._conn+"\n");
-                if (!this._conn.tableExists('accounts'))
-                    this._conn.createTable('accounts',
+                gAM._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
+                if (!gAM._conn.tableExists('accounts'))
+                    gAM._conn.createTable('accounts',
                             'name char, acct_id integer, ltd char, full char, ' +
                             'primary key (acct_id)');
             } catch (e) {
-                dump(e.toString()+"\n"+this._conn.lastErrorString+"\n");
+                dump(e.toString()+"\n"+gAM._conn.lastErrorString+"\n");
             }
 
             for (i in AuthDataStm)
                 try {
-                    this[StmName(i)] = this._conn.createStatement(AuthDataStm[i]);
+                    gAM[StmName(i)] = gAM._conn.createStatement(AuthDataStm[i]);
                 } catch (e) {
                     dump('Error in statement "' + AuthDataStm[i] + '": ' +
-                            this._conn.lastErrorString+"\n");
+                            gAM._conn.lastErrorString+"\n");
                 }
             break;
         }
@@ -301,16 +295,16 @@ authman.prototype = {
         return result;
     },
     getTokenForAccount:     function (account, type) {
-        let stm = this._getAcctStm;
+        let stm = gAM._getAcctStm;
         stm.params.acct_id = account;
-        let key = this._keyFromStm(stm, type);
+        let key = gAM._keyFromStm(stm, type);
         return key
             ? new eveAuth({accountID: account, type: type, apiKey: key})
             : null;
     },
 
     getTokenForChar:        function (character, type) {
-        var tok = this.getTokenForAccount(character.account, type);
+        var tok = gAM.getTokenForAccount(character.account, type);
         if (tok)
             tok.characterID = character.id;
         return tok;
@@ -319,13 +313,13 @@ authman.prototype = {
     getTokenForCorp:        function (corporation, type) {
         var ch = corporation.getMembers({})[0];
         return ch
-            ? this.getTokenForChar(ch, type)
+            ? gAM.getTokenForChar(ch, type)
             : null;
     },
 
     getAccounts:      function (out) {
         var result = [];
-        let stm = this._getAcctsStm;
+        let stm = gAM._getAcctsStm;
         try {
             while (stm.step())
                 result.push((new eveacct())._initFromData(stm.row));
