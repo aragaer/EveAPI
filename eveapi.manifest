@@ -19,6 +19,9 @@ contract @aragaer/eve-api;1 {6f7ee12b-12b3-4101-a4c9-ecdc97c51421}
 component {4ba2f4f7-12bc-4194-81ee-fc5e434e8073} eveapirequester.js
 contract @aragaer/eve/api-requester;1 {4ba2f4f7-12bc-4194-81ee-fc5e434e8073}
 
+component {8b787ff0-a7a2-4e6e-adee-09abaa4b80a3} eveapirequester.js
+contract @aragaer/eve/account;1 {8b787ff0-a7a2-4e6e-adee-09abaa4b80a3}
+
 component {df6010ca-4902-43c1-a5f7-6d2aa86ddcad} eveapirequester.js
 contract @aragaer/eve/auth-manager;1 {df6010ca-4902-43c1-a5f7-6d2aa86ddcad}
 category app-startup authman @aragaer/eve/auth-manager;1
@@ -50,4 +53,9 @@ contract @aragaer/eve/item;1 {658ce840-ac50-4429-97bd-a68e9327b884}
 component {e5dc59a4-217e-46da-8c9f-d6de36df2d3f} eveinventory.js
 contract @aragaer/eve/inventory;1 {e5dc59a4-217e-46da-8c9f-d6de36df2d3f}
 category app-startup eveinventory @aragaer/eve/inventory;1
+
+#evecharacter
+component {64a77750-4fad-4435-80de-7474b7a335d3} evecharacter.js
+contract @aragaer/eve/callbacks/characters;1 {64a77750-4fad-4435-80de-7474b7a335d3}
+category app-startup CharacterCallback @aragaer/eve/callbacks/characters;1
 

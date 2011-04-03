@@ -75,8 +75,8 @@ function eveRequester() {
             getService(Ci.nsICacheService).createSession("EVE API",
                     Ci.nsICache.STORE_OFFLINE, true);
 
-//    this._fromCache = this._fromCache_real;
-    this._fromCache = this._fromCache_null;
+    this._fromCache = this._fromCache_real;
+//    this._fromCache = this._fromCache_null;
 
     gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     gEAR = this;
@@ -421,9 +421,9 @@ eveacct.prototype = {
         gOS.addObserver({
             observe: function (aTopic, aSubject, aData) {
                 try {
-                gOS.removeObserver(this, 'eve-data-error');
-                dump("done checking limited key\n");
-                handler.processResult(aData == '');
+                    gOS.removeObserver(this, 'eve-data-error');
+                    dump("done checking limited key\n");
+                    handler.processResult(aData == '');
                 } catch (e) { dump(""+e+"\n"); }
             }
         }, 'eve-data-error', false);
@@ -439,9 +439,9 @@ eveacct.prototype = {
         gOS.addObserver({
             observe: function (aTopic, aSubject, aData) {
                 try {
-                gOS.removeObserver(this, 'eve-data-error');
-                handler.processResult(aData == '');
-                dump("done checking full key\n");
+                    gOS.removeObserver(this, 'eve-data-error');
+                    handler.processResult(aData == '');
+                    dump("done checking full key\n");
                 } catch (e) { dump(""+e+"\n"); }
             }
         }, 'eve-data-error', false);
