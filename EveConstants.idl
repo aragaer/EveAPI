@@ -39,3 +39,19 @@ interface nsEveAuthTokenType {
     const nsEveAuthTokenTypeValue TYPE_DIRECTOR = 2; /* used for corp data */
 };
 
+typedef short nsEveTransactionTypeValue;
+
+[scriptable, uuid(e368756f-9bd1-481b-af73-70414ccd107d)]
+interface nsEveTransactionType {
+    const nsEveTransactionTypeValue TYPE_SELL   = 0;
+    const nsEveTransactionTypeValue TYPE_BUY    = 1;
+};
+
+typedef short nsEveTransactionForValue;
+
+[scriptable, uuid(09a63fac-8e15-4cae-b221-7b14d0f4a282)]
+interface nsEveTransactionFor {
+    const nsEveTransactionForValue TYPE_PERSONAL    = 0;
+    const nsEveTransactionForValue TYPE_CORPORATION = 1;
+};
+

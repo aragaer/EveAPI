@@ -188,10 +188,6 @@ EveHRManager.prototype = {
     classID:          Components.ID("{01844e7a-b187-4411-b687-ec4cccb38cd4}"),
     contractID:       "@aragaer/eve-hr-manager;1",
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIEveHRManager, Ci.nsIObserver]),
-    _xpcom_categories: [{
-        category: "app-startup",
-        service: true
-    }],
 
     observe:        function (aSubject, aTopic, aData) {
         switch (aTopic) {
@@ -243,7 +239,7 @@ EveHRManager.prototype = {
             while (stm.step()) {
                 let charID = stm.row.id;
                 if (!gHR._characters['c'+charID])
-                    gHR._characters['c'+charID] = new EveCharacter(corpID);
+                    gHR._characters['c'+charID] = new EveCharacter(charID);
                 res.push(gHR._characters['c'+charID]);
             }
         } catch (e) {

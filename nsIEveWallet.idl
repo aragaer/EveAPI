@@ -1,0 +1,29 @@
+#include "nsISupports.idl"
+#include "EveConstants.idl"
+#include "nsIEveHRManager.idl"
+
+[scriptable, uuid(826b9ae2-5a29-42e8-a1d7-bed3ba5032cf)]
+interface nsIEveWalletTransaction : nsISupports {
+    readonly attribute nsEveItemTypeIDValue typeID;
+    readonly attribute long quantity;
+    readonly attribute float price;
+    readonly attribute long timestamp;
+    readonly attribute nsEveTransactionTypeValue type;
+    readonly attribute nsEveTransactionForValue tFor;
+    readonly attribute long clientID;    
+};
+/*
+interface nsIEveWalletRecord : nsISupports {
+
+};
+*/
+
+[scriptable, uuid(20a39b3e-28e6-40dc-a347-626727a31a9b)]
+interface nsIEveWalletManager : nsISupports {
+    void getTransactionsForChar(in nsIEveCharacter character,
+        in unsigned long start_time,
+        in unsigned long end_time,
+        out unsigned long count,
+        [array, size_is(count), retval] out nsIEveWalletTransaction retv);
+};
+

@@ -155,11 +155,11 @@ prefdir = $(pkgdatadir)/defaults/preferences
 # @configure_input@
 JS_FILES = eveapirequester.js dbwrapper.js eveapiservice.js \
 	evecharacter.js controltower.js hr.js eveassets.js \
-	eveinventory.js
+	eveinventory.js wallet.js
 XPT_FILES = nsIEveApiRequester.xpt nsIEveApiService.xpt \
 	nsIEveDBService.xpt EveConstants.xpt \
 	nsIEveInventoryService.xpt nsIEveHRManager.xpt \
-	nsIEveControlTower.xpt
+	nsIEveControlTower.xpt nsIEveWallet.xpt
 tgtdir = $(compdir)/eve-api
 tgt_DATA = eveapi.manifest $(JS_FILES) $(XPT_FILES)
 pref_DATA = api_pref.js

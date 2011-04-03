@@ -5,6 +5,7 @@ interfaces nsIEveControlTower.xpt
 interfaces nsIEveDBService.xpt
 interfaces nsIEveHRManager.xpt
 interfaces nsIEveInventoryService.xpt
+interfaces nsIEveWallet.xpt
 
 #dbwrapper
 component {66575bef-61c0-4ea3-9c34-17c10870e6a9} dbwrapper.js
@@ -58,4 +59,12 @@ category app-startup eveinventory @aragaer/eve/inventory;1
 component {64a77750-4fad-4435-80de-7474b7a335d3} evecharacter.js
 contract @aragaer/eve/callbacks/characters;1 {64a77750-4fad-4435-80de-7474b7a335d3}
 category app-startup CharacterCallback @aragaer/eve/callbacks/characters;1
+
+#wallet
+component {17e1f782-60b6-4a7d-b610-0380d56019c9} wallet.js
+contract @aragaer/eve/wallet/transaction; {17e1f782-60b6-4a7d-b610-0380d56019c9}
+
+component {daeea9e7-66e5-47d7-8117-f2a18d054790} wallet.js
+contract @aragaer/eve/wallet/manager;1 {daeea9e7-66e5-47d7-8117-f2a18d054790}
+category app-startup walletman @aragaer/eve/wallet/manager;1
 
