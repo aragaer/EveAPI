@@ -65,8 +65,8 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(compdir)" "$(DESTDIR)$(prefdir)"
-DATA = $(comp_DATA) $(pref_DATA)
+am__installdirs = "$(DESTDIR)$(prefdir)" "$(DESTDIR)$(tgtdir)"
+DATA = $(pref_DATA) $(tgt_DATA)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -160,7 +160,8 @@ XPT_FILES = nsIEveApiRequester.xpt nsIEveApiService.xpt \
 	nsIEveDBService.xpt EveConstants.xpt \
 	nsIEveInventoryService.xpt nsIEveHRManager.xpt \
 	nsIEveControlTower.xpt
-comp_DATA = eveapi.manifest $(JS_FILES) $(XPT_FILES)
+tgtdir = $(compdir)/eve-api
+tgt_DATA = eveapi.manifest $(JS_FILES) $(XPT_FILES)
 pref_DATA = api_pref.js
 all: all-am
 
@@ -195,26 +196,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-install-compDATA: $(comp_DATA)
-	@$(NORMAL_INSTALL)
-	test -z "$(compdir)" || $(MKDIR_P) "$(DESTDIR)$(compdir)"
-	@list='$(comp_DATA)'; test -n "$(compdir)" || list=; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(compdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(compdir)" || exit $$?; \
-	done
-
-uninstall-compDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(comp_DATA)'; test -n "$(compdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(compdir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(compdir)" && rm -f $$files
 install-prefDATA: $(pref_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(prefdir)" || $(MKDIR_P) "$(DESTDIR)$(prefdir)"
@@ -235,6 +216,26 @@ uninstall-prefDATA:
 	test -n "$$files" || exit 0; \
 	echo " ( cd '$(DESTDIR)$(prefdir)' && rm -f" $$files ")"; \
 	cd "$(DESTDIR)$(prefdir)" && rm -f $$files
+install-tgtDATA: $(tgt_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(tgtdir)" || $(MKDIR_P) "$(DESTDIR)$(tgtdir)"
+	@list='$(tgt_DATA)'; test -n "$(tgtdir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(tgtdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(tgtdir)" || exit $$?; \
+	done
+
+uninstall-tgtDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(tgt_DATA)'; test -n "$(tgtdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(tgtdir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(tgtdir)" && rm -f $$files
 tags: TAGS
 TAGS:
 
@@ -276,7 +277,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(compdir)" "$(DESTDIR)$(prefdir)"; do \
+	for dir in "$(DESTDIR)$(prefdir)" "$(DESTDIR)$(tgtdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -324,7 +325,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-compDATA install-prefDATA
+install-data-am: install-prefDATA install-tgtDATA
 
 install-dvi: install-dvi-am
 
@@ -368,21 +369,21 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-compDATA uninstall-prefDATA
+uninstall-am: uninstall-prefDATA uninstall-tgtDATA
 
 .MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic distclean \
 	distclean-generic distdir dvi dvi-am html html-am info info-am \
-	install install-am install-compDATA install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-prefDATA install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	install install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-prefDATA install-ps \
+	install-ps-am install-strip install-tgtDATA installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am uninstall uninstall-am uninstall-compDATA \
-	uninstall-prefDATA
+	pdf-am ps ps-am uninstall uninstall-am uninstall-prefDATA \
+	uninstall-tgtDATA
 
 %.xpt: %.idl
 	$(XPIDL) -m typelib -w -v -I $(IDLDIR) -I `dirname "$<"` -e $@ $<
