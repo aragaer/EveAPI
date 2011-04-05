@@ -230,7 +230,7 @@ EveHRManager.prototype = {
         } catch (e) {
             dump("getAllCorporations:"+e.toString()+"\n");
         } finally {
-            stm.reset;
+            stm.reset();
         }
         out.value = res.length;
         return res;
