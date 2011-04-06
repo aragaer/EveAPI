@@ -70,7 +70,7 @@ function process(data) {
                 dump(field + " = " + my_data[field]+"\n");
             });
         dump(my_data.name+" from "+my_data.corporationName+"\n");
-        replaceCharStm.params.acct_id   = aux.wrappedJSObject.userID;
+        replaceCharStm.params.acct_id   = aux.userID;
         replaceCharStm.params.name      = my_data.name;
         replaceCharStm.params.id        = my_data.characterID;
         replaceCharStm.params.corp_id   = my_data.corporationID;

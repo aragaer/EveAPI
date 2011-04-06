@@ -428,7 +428,7 @@ eveacct.prototype = {
                 try {
                     gOS.removeObserver(this, 'eve-data-error');
                     dump("done checking limited key\n");
-                    handler.processResult(aData == '');
+                    handler.processResult(aTopic.wrappedJSObject.error == '');
                 } catch (e) { dump(""+e+"\n"); }
             }
         }, 'eve-data-error', false);
@@ -445,7 +445,7 @@ eveacct.prototype = {
             observe: function (aTopic, aSubject, aData) {
                 try {
                     gOS.removeObserver(this, 'eve-data-error');
-                    handler.processResult(aData == '');
+                    handler.processResult(aTopic.wrappedJSObject.error == '');
                     dump("done checking full key\n");
                 } catch (e) { dump(""+e+"\n"); }
             }
