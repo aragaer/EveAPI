@@ -98,12 +98,10 @@ eveRequester.prototype = {
             return;
         dump("refreshing data\n");
         var dwjso = data ? data.wrappedJSObject : null;
-        var res = this._fetchXML(EVEAPIURL+EVEURLS[type], data
-                ? [i+'='+escape(dwjso[i]) for (i in dwjso)].join('&')
-                : '');
+        var res = this._fetchXML(type, dwjso);
         if (!res)
             return;
-        gOS.notifyObservers({ wrappedJSObject: {doc: res, aux: data} },
+        gOS.notifyObservers({ wrappedJSObject: {doc: res, aux: dwjso} },
                 'eve-data', type);
     },
 
@@ -140,16 +138,20 @@ eveRequester.prototype = {
         return result;
      },
  
-    _fetchXML:          function (url, data) {
+    _fetchXML:          function (type, data) {
         var result;
-        var cacheKey = url + '?stamp=' + this._makeHash(data);
+        var dataString = data
+                ? [i+'='+escape(data[i]) for (i in data)].join('&')
+                : ''
+        var url = EVEAPIURL+EVEURLS[type];
+        var cacheKey = url + '?stamp=' + this._makeHash(dataString);
         dump("Fetching "+cacheKey+"\n");
         dump("data ["+data+"]\n");
         var cd = this.cache_session.openCacheEntry(cacheKey, Ci.nsICache.ACCESS_READ_WRITE, true);
         if (cd.accessGranted == Ci.nsICache.ACCESS_READ_WRITE   // It exists
                 && cd.expirationTime*1000 > Date.now()) {       // And it is valid
             dump("Using cache now\n");
-            gOS.notifyObservers(null, 'eve-data-error', '');
+            gOS.notifyObservers({wrappedJSObject:{error:'', aux: data}}, 'eve-data-error', type);
             return this._fromCache(cd);
         }
  
@@ -160,7 +162,7 @@ eveRequester.prototype = {
         try {
             var t = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
             t.initWithCallback(req.abort, 5000, t.TYPE_ONE_SHOT);
-            req.send(data);
+            req.send(dataString);
             t.cancel();
         } catch (e) {
             dump(e.toString()+"\n");
@@ -168,7 +170,10 @@ eveRequester.prototype = {
         }
         if (req.status != 200) {
             dump('Failed to connect to server!\n');
-            gOS.notifyObservers(null, 'eve-data-error', 'Failed to connect to server '+req.status);
+            gOS.notifyObservers({wrappedJSObject:{
+                    error:'Failed to connect to server '+req.status,
+                    aux: data}
+                }, 'eve-data-error', type);
             return this._fromCache(cd);
         }
  
@@ -178,11 +183,11 @@ eveRequester.prototype = {
         var error = evaluateXPath(result, "/eveapi/error/text()")[0];
         if (error) {
             dump("REQUESTER ERROR:"+error.wholeText+"\n");
-            gOS.notifyObservers(null, 'eve-data-error', error.wholeText);
+            gOS.notifyObservers({wrappedJSObject:{error:error.wholeText, aux: data}}, 'eve-data-error', type);
             return this._fromCache(cd);
         }
 
-        gOS.notifyObservers(null, 'eve-data-error', '');
+        gOS.notifyObservers({wrappedJSObject:{error:'', aux: data}}, 'eve-data-error', type);
  
         var serializer = Cc["@mozilla.org/xmlextras/xmlserializer;1"].
             createInstance(Ci.nsIDOMSerializer);
