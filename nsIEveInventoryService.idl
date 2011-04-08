@@ -17,6 +17,7 @@ interface nsIEveItemGroup : nsISupports {
 
 [scriptable, uuid(b0da4573-23a6-4c6d-9c67-b09ee6fb5f9e)]
 interface nsIEveItemType : nsISupports {
+    readonly attribute short TL;
     readonly attribute nsEveItemTypeIDValue id;
     readonly attribute string name;
     readonly attribute nsIEveItemGroup group;

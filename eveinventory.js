@@ -65,6 +65,9 @@ const DataStatements = {
     hasStuffInside: 'select count(*) as cnt from assets where container=:id',
     getSystemName:  'select solarSystemName as name from mapSolarSystems where solarSystemID=:loc_id;',
     getStationName: 'select stationName as name from staStations where stationID=:loc_id;',
+    getTechLevel:   'select valueInt as TL from dgmTypeAttributes ' +
+            'where typeID=:id and attributeID=422 ' +   // 422 - techLevel
+            'union all select 0;',                      // We are using the data from only one row. This is just a failsafe 0
 };
 
 function StmName(FuncName) "_"+FuncName+"Stm";
@@ -106,8 +109,10 @@ eveitemgroup.prototype = {
 function eveitemtype(typeid) {
     this._id = typeid;
     let {typeName: name, groupID: grpid} = IF.getTypeData(typeid);
+    let {TL: TL} = IF.getTechLevel(typeid);
     this._name = name;
     this._group = IF.getItemGroup(grpid);
+    this._tl = TL;
 
     for each (ext in ExtraQI.type) {
         if (!ext.test(this))
@@ -138,6 +143,7 @@ eveitemtype.prototype = {
     get name()          this._name,
     get group()         this._group,
     get category()      this._group.category,
+    get TL()            this._tl,
 };
 
 function getItemIdFromDataByCT(constructorType, data) {
@@ -349,7 +355,7 @@ eveinventory.prototype = {
         switch (aTopic) {
         case 'app-startup':
             gOS.addObserver(this, 'eve-db-init', false);
-            for (i in DataStatements)
+            for (var i in DataStatements)
                 IF[i] = IF.getDataById(IF, StmName(i));
             break;
         case 'eve-db-init':
@@ -364,7 +370,7 @@ eveinventory.prototype = {
                         'itemID integer, itemName char, categoryID integer, ' +
                         'groupID integer, typeID integer, primary key (itemID)');
 
-            for (i in DataStatements)
+            for (var i in DataStatements)
                 try {
                     IF[StmName(i)] = this._conn.createStatement(DataStatements[i]);
                 } catch (e) {
