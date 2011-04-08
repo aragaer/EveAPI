@@ -1,0 +1,21 @@
+#include "nsISupports.idl"
+#include "EveConstants.idl"
+#include "nsIEveInventoryService.idl"
+
+[scriptable, uuid(3f18a942-5769-4a30-82a5-378a5c1103b6)]
+interface nsIEveMaterialRequirement : nsISupports {
+    readonly attribute nsEveItemTypeIDValue id;
+    readonly attribute long quantity;
+    readonly attribute float damagePerJob;
+}
+
+[scriptable, uuid(b76a88a4-d404-4685-9abb-fdfbc7649bf4)]
+interface nsIEveItemTypeBuildable : nsIEveItemType {
+    readonly attribute nsEveItemTypeIDValue blueprintID;
+    readonly attribute float wastageFactor;
+    void getRawMaterials(out unsigned long count,
+        [array, size_is(count), retval] out nsIEveMaterialRequirement retv);
+    void getExtraMaterials(out unsigned long count,
+        [array, size_is(count), retval] out nsIEveMaterialRequirement retv);
+}
+
